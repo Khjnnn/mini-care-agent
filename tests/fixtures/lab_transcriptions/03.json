@@ -1,0 +1,7 @@
+{"report_date": "2026-11-02", "institution": null, "items": [
+ {"name": "혈색소", "value": "I3.8", "unit": "g/dL", "reference_range": "12~16.5", "flag": null},
+ {"name": "공복시혈당", "value": "98", "unit": "mg/dL", "reference_range": "70-99", "flag": null},
+ {"name": "LDL콜레스테롤", "value": "1O5", "unit": "mg/dL", "reference_range": "130 미만", "flag": null},
+ {"name": "혈청크레아티닌", "value": "0.9", "unit": "mg/dL", "reference_range": "0.5~1.4", "flag": null},
+ {"name": "요단백", "value": "음성", "unit": null, "reference_range": null, "flag": null}
+]}

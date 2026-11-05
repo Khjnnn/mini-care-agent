@@ -1,0 +1,13 @@
+{
+  "report_date": "2026-10-20",
+  "items": [
+    {"loinc": "4548-4", "value": 7.9, "unit": "%", "interpretation": "H"},
+    {"loinc": "1558-6", "value": 151, "unit": "mg/dL", "interpretation": "H"},
+    {"loinc": "2093-3", "value": 214, "unit": "mg/dL", "interpretation": "H"},
+    {"loinc": "18262-6", "value": 138, "unit": "mg/dL", "interpretation": "H"},
+    {"loinc": "2085-9", "value": 44, "unit": "mg/dL", "interpretation": "N"},
+    {"loinc": "2571-8", "value": 162, "unit": "mg/dL", "interpretation": "H"},
+    {"loinc": "2160-0", "value": 1.02, "unit": "mg/dL", "interpretation": "N"},
+    {"loinc": "33914-3", "value": 79, "unit": "mL/min/1.73m2", "interpretation": "N"}
+  ]
+}

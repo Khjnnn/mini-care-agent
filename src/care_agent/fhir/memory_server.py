@@ -66,9 +66,11 @@ class InMemoryFHIR(httpx.AsyncBaseTransport):
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
-        if request.method != "GET":
-            return _outcome(405, "read-only in-memory server")
         parts = [p for p in request.url.path.split("/") if p and p != "fhir"]
+        if request.method == "POST" and not parts:
+            return self._transaction(json.loads(await request.aread()))
+        if request.method != "GET":
+            return _outcome(405, "only GET and transaction POST are supported")
         if len(parts) == 2:
             rtype, rid = parts
             for r in self.records:
@@ -95,6 +97,35 @@ class InMemoryFHIR(httpx.AsyncBaseTransport):
             }
             return httpx.Response(200, json=bundle)
         return _outcome(400, "unsupported path")
+
+    def _transaction(self, bundle: dict[str, Any]) -> httpx.Response:
+        if bundle.get("resourceType") != "Bundle" or bundle.get("type") != "transaction":
+            return _outcome(400, "expected a transaction Bundle")
+        entries = bundle.get("entry", [])
+        if any(e.get("request", {}).get("method") != "POST" for e in entries):
+            return _outcome(400, "only POST entries are supported")
+        created = []
+        for entry in entries:  # validate everything first: all-or-nothing
+            resource = dict(entry["resource"])
+            resource["id"] = f"mem-{len(self.records) + len(created) + 1}"
+            created.append(resource)
+        self.records.extend(created)
+        return httpx.Response(
+            200,
+            json={
+                "resourceType": "Bundle",
+                "type": "transaction-response",
+                "entry": [
+                    {
+                        "response": {
+                            "status": "201 Created",
+                            "location": f"{r['resourceType']}/{r['id']}",
+                        }
+                    }
+                    for r in created
+                ],
+            },
+        )
 
 
 def _outcome(status: int, msg: str) -> httpx.Response:

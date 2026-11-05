@@ -1,0 +1,11 @@
+{
+  "_comment": "OCR noise on purpose: 'I3.8' (I for 1) and '1O5' (O for 0). A faithful transcription keeps them, which must surface as non_numeric_value issues for human review rather than silently becoming numbers. '요단백' (urine protein) is not in the catalogue and must surface as unmapped_test.",
+  "report_date": "2026-11-02",
+  "items": [
+    {"loinc": "718-7", "value": 13.8, "unit": "g/dL", "interpretation": "N"},
+    {"loinc": "1558-6", "value": 98, "unit": "mg/dL", "interpretation": "N"},
+    {"loinc": "18262-6", "value": 105, "unit": "mg/dL", "interpretation": "N"},
+    {"loinc": "2160-0", "value": 0.9, "unit": "mg/dL", "interpretation": "N"}
+  ],
+  "expected_issues": ["non_numeric_value", "unmapped_test"]
+}

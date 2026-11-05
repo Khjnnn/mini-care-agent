@@ -1,0 +1,10 @@
+{
+  "report_date": "2026-09-03",
+  "items": [
+    {"loinc": "1558-6", "value": 109.9, "unit": "mg/dL", "interpretation": "H"},
+    {"loinc": "1920-8", "value": 28, "unit": "U/L", "interpretation": "N"},
+    {"loinc": "1742-6", "value": 52, "unit": "U/L", "interpretation": "H"},
+    {"loinc": "718-7", "value": 11.4, "unit": "g/dL", "interpretation": "L"},
+    {"loinc": "4548-4", "value": 6.08, "unit": "%", "interpretation": "H"}
+  ]
+}

@@ -1,0 +1,7 @@
+{"report_date": "2026-09-03", "institution": "Example Health Center (fictional)", "items": [
+ {"name": "Fasting Glucose", "value": "6.1", "unit": "mmol/L", "reference_range": "3.9 - 5.5", "flag": "H"},
+ {"name": "AST (SGOT)", "value": "28", "unit": "IU/L", "reference_range": "0 - 40", "flag": null},
+ {"name": "ALT (SGPT)", "value": "52", "unit": "IU/L", "reference_range": "0 - 40", "flag": "H"},
+ {"name": "Hemoglobin", "value": "11.4", "unit": "g/dL", "reference_range": "12.0 - 16.0", "flag": "L"},
+ {"name": "HbA1c", "value": "43", "unit": "mmol/mol", "reference_range": "20 - 38", "flag": "H"}
+]}

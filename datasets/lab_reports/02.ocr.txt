@@ -1,0 +1,10 @@
+[SYNTHETIC] Health Check-up — Blood Chemistry
+Institution: Example Health Center (fictional)
+Date of collection: 2026.09.03
+
+Test                 Result   Unit      Ref. range     Flag
+Fasting Glucose      6.1      mmol/L    3.9 - 5.5      H
+AST (SGOT)           28       IU/L      0 - 40
+ALT (SGPT)           52       IU/L      0 - 40         H
+Hemoglobin           11.4     g/dL      12.0 - 16.0    L
+HbA1c                43       mmol/mol  20 - 38        H

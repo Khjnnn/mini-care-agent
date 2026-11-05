@@ -44,6 +44,15 @@ class FHIRClient:
             if entry.get("search", {}).get("mode", "match") == "match" and "resource" in entry
         ]
 
+    async def transaction(self, bundle: dict[str, Any]) -> dict[str, Any]:
+        """POST a transaction bundle (all-or-nothing on a conformant server)."""
+        if bundle.get("type") != "transaction":
+            raise ValueError("bundle.type must be 'transaction'")
+        resp = await self._http.post(
+            "", json=bundle, headers={"Content-Type": "application/fhir+json"}
+        )
+        return self._json(resp)
+
     @staticmethod
     def _json(resp: httpx.Response) -> dict[str, Any]:
         if resp.is_success:

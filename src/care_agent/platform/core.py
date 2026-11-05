@@ -24,6 +24,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from care_agent.agent.loop import Agent, current_run
 from care_agent.agent.prompts import SYSTEM_PROMPT
 from care_agent.agent.trace import TraceEvent
+from care_agent.documents.extract import LabReportExtractor, OCRBackend
+from care_agent.documents.pipeline import LabReportPipeline
 from care_agent.fhir.client import FHIRClient
 from care_agent.llm.base import LLM
 from care_agent.memory.store import MemoryStore
@@ -65,10 +67,14 @@ class Platform:
         *,
         memory: MemoryStore | None = None,
         plugins: Iterable[str] = (),
+        document_llm: LLM | None = None,
+        ocr: OCRBackend | None = None,
     ) -> None:
         self.llm = llm
         self.fhir = fhir
         self.memory = memory or MemoryStore()
+        #: Document structuring may use a different (vision) model than the chat agents.
+        self.lab_reports = LabReportPipeline(LabReportExtractor(document_llm or llm, ocr=ocr), fhir)
         self.tools = ToolRegistry()
         build_fhir_tools(fhir, self.tools)
         build_memory_tools(self.memory, self.tools)

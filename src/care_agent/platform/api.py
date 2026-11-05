@@ -10,14 +10,32 @@ deployment the caller's token must be checked against ``patient_id`` before ``ru
 
 from __future__ import annotations
 
+import base64
+import binascii
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+from care_agent.documents.pipeline import ReviewRequired, outcome_to_dict
+from care_agent.documents.schema import StructuredLabReport
+from care_agent.fhir.client import FHIRError
 from care_agent.memory.store import SessionPatientMismatch
 from care_agent.platform.core import Platform
 from care_agent.tools.registry import Tool
+
+
+class ExtractRequest(BaseModel):
+    text: str | None = Field(default=None, max_length=50_000)
+    image_base64: str | None = None
+    mime: str = "image/png"
+
+
+class CommitRequest(BaseModel):
+    patient_id: str = Field(min_length=1)
+    report: StructuredLabReport
+    reviewed_by: str = Field(min_length=1, description="검토한 사람 (감사 로그용)")
+    acknowledge_issues: bool = False
 
 
 class RunRequest(BaseModel):
@@ -99,6 +117,42 @@ def create_app(platform: Platform) -> FastAPI:
             flags=flags,
             trace=[e.to_dict() for e in result.trace] if req.include_trace else None,
         )
+
+    @app.post("/v1/documents/lab-report/extract")
+    async def extract_lab_report(req: ExtractRequest) -> dict[str, Any]:
+        """Image or OCR text → structured report for human review. Writes nothing."""
+        if (req.text is None) == (req.image_base64 is None):
+            raise HTTPException(422, "pass exactly one of text or image_base64")
+        image = None
+        if req.image_base64 is not None:
+            try:
+                image = base64.b64decode(req.image_base64, validate=True)
+            except binascii.Error as e:
+                raise HTTPException(422, "image_base64 is not valid base64") from e
+        outcome = await platform.lab_reports.extract(text=req.text, image=image, mime=req.mime)
+        return outcome_to_dict(outcome)
+
+    @app.post("/v1/documents/lab-report/commit")
+    async def commit_lab_report(req: CommitRequest) -> dict[str, Any]:
+        """Human-reviewed report → FHIR Observations (one transaction)."""
+        try:
+            out = await platform.lab_reports.commit(
+                req.report,
+                req.patient_id,
+                reviewed_by=req.reviewed_by,
+                acknowledge_issues=req.acknowledge_issues,
+            )
+        except ReviewRequired as e:
+            raise HTTPException(
+                422, {"message": str(e), "issues": [i.model_dump() for i in e.issues]}
+            ) from e
+        except FHIRError as e:
+            raise HTTPException(502 if e.status_code >= 500 else e.status_code, str(e)) from e
+        return {
+            "created": out.created,
+            "acknowledged_issues": [i.model_dump() for i in out.acknowledged_issues],
+            "reviewed_by": req.reviewed_by,
+        }
 
     @app.get("/v1/sessions/{session_id}/turns")
     async def session_turns(session_id: str, limit: int = 20) -> list[dict[str, Any]]:

@@ -93,9 +93,47 @@ def _serve(args: argparse.Namespace) -> int:
     return 0
 
 
+_IMAGE_MIME = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+}
+
+
+def _docs(args: argparse.Namespace) -> int:
+    from care_agent.documents.evaluate import evaluate_dataset
+    from care_agent.documents.pipeline import outcome_to_dict
+
+    platform = build_platform(Settings.from_env(), offline=True, memory_path=":memory:")
+    if args.docs_cmd == "eval":
+        report = asyncio.run(evaluate_dataset(platform.lab_reports, args.dataset))
+        if args.out:
+            Path(args.out).write_text(json.dumps(report, ensure_ascii=False, indent=2), "utf-8")
+        print(json.dumps(report["summary"], ensure_ascii=False, indent=2))
+        return 0
+
+    path = Path(args.file)
+    mime = _IMAGE_MIME.get(path.suffix.lower())
+    if mime:
+        job = platform.lab_reports.extract(image=path.read_bytes(), mime=mime)
+    else:
+        job = platform.lab_reports.extract(text=path.read_text("utf-8"))
+    print(json.dumps(outcome_to_dict(asyncio.run(job)), ensure_ascii=False, indent=2))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="care-agent")
     sub = parser.add_subparsers(dest="cmd", required=True)
+
+    docs = sub.add_parser("docs", help="lab report structuring")
+    docs_sub = docs.add_subparsers(dest="docs_cmd", required=True)
+    extract = docs_sub.add_parser("extract", help="structure one report (image or OCR text)")
+    extract.add_argument("file")
+    ev = docs_sub.add_parser("eval", help="field-level accuracy on a labelled dataset")
+    ev.add_argument("dataset", nargs="?", default="datasets/lab_reports")
+    ev.add_argument("--out", help="write full per-sample report as JSON")
 
     ask = sub.add_parser("ask", help="ask an agent a question about one patient")
     ask.add_argument("question")
@@ -121,6 +159,7 @@ def main(argv: list[str] | None = None) -> int:
         "tools": _tools,
         "agents": _agents,
         "serve": _serve,
+        "docs": _docs,
     }
     return handlers[args.cmd](args)
 
