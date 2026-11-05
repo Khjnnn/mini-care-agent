@@ -21,6 +21,7 @@ from typing import Any, Literal
 
 from pydantic import ValidationError
 
+from care_agent.agent.nudges import check_answer
 from care_agent.agent.prompts import SYSTEM_PROMPT
 from care_agent.agent.trace import TraceEvent
 from care_agent.llm.base import LLM, Message, ToolCall
@@ -153,6 +154,7 @@ class Agent:
             ]
         messages.append({"role": "user", "content": question})
         tool_specs = self.tools.to_openai()
+        nudged: set[str] = set()
 
         for step in range(1, self.max_steps + 1):
             ctx.step = step
@@ -175,6 +177,18 @@ class Agent:
             messages.append(resp.as_message())
 
             if not resp.tool_calls:
+                nudge = check_answer(
+                    resp.content or "",
+                    tools_available=len(self.tools) > 0,
+                    tools_attempted=any(e.type.startswith("tool_") for e in trace),
+                )
+                if nudge and nudge.kind not in nudged and step < self.max_steps:
+                    nudged.add(nudge.kind)
+                    trace.append(
+                        TraceEvent("nudge", {"kind": nudge.kind, "evidence": nudge.evidence}, step)
+                    )
+                    messages.append({"role": "user", "content": nudge.message})
+                    continue
                 checked = self.output_gate.check(resp.content or "")
                 if checked.modified:
                     trace.append(

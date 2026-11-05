@@ -32,7 +32,7 @@ async def test_conditions_active_filter(registry):
 
 async def test_observations_latest_first_with_reference_range(registry):
     tool = registry.get("get_recent_observations")
-    a1c = await tool.invoke({"patient_id": "demo-001", "loinc_code": "4548-4"})
+    a1c = await tool.invoke({"patient_id": "demo-001", "test": "4548-4"})
     assert [o["value"] for o in a1c] == [7.8, 7.2]
     assert a1c[0]["date"] == "2026-09-15"
     assert a1c[0]["reference_range"] == "4.0-5.6"

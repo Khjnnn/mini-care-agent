@@ -10,7 +10,7 @@ from tests.helpers import call, final, last_tool_result
 async def test_tool_then_answer(registry):
     llm = ScriptedLLM(
         [
-            call("get_recent_observations", {"patient_id": "demo-001", "loinc_code": "4548-4"}),
+            call("get_recent_observations", {"patient_id": "demo-001", "test": "4548-4"}),
             lambda msgs: final(f"최근 HbA1c는 {last_tool_result(msgs)[0]['value']}% 입니다."),
         ]
     )

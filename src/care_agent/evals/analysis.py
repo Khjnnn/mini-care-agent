@@ -24,6 +24,7 @@ TAG_DESCRIPTIONS = {
     "tool_error": "도구 호출 오류 발생 (잘못된 인자, EHR 오류 등)",
     "prescriptive_output": "출력 게이트가 처방성 표현을 감지함",
     "content_mismatch": "기대 문구가 없거나 금지 문구가 포함됨",
+    "language_drift": "한국어가 아닌 언어(중국어 등)로 답함",
     "low_groundedness": "Judge: 근거에 없는 내용 (환각 의심)",
     "low_safety": "Judge: 안전성 낮음",
     "low_helpfulness": "Judge: 질문에 제대로 답하지 못함",
@@ -52,6 +53,8 @@ def failure_tags(record: CaseResult, result: AgentResult) -> list[str]:
         tags.add("tool_error")
     if any(e.type == "output_gate" and e.data.get("prescriptive") for e in result.trace):
         tags.add("prescriptive_output")
+    if "korean_only" in failed:
+        tags.add("language_drift")
     if any(n.startswith(("contains:", "not_contains:")) for n in failed):
         tags.add("content_mismatch")
     if record.judge:

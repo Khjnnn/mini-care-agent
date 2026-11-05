@@ -18,7 +18,7 @@
 | **평가·관측** | 회귀 스위트, LLM-as-a-Judge(루브릭·pairwise), 대량 실행 큐, 실패 분류, A/B 비교, drift(PSI), Langfuse, CI 품질 게이트 | `evals/` `observability/` |
 | **서빙·라우팅** | PHI 기반 라우터(온프렘 ↔ GCP ↔ public), 서킷 브레이커, OpenAI 호환 게이트웨이, TTFT/ITL 벤치마크, vLLM·GKE 배포 설정 | `serving/` `deploy/` `docs/serving.md` |
 
-테스트 116개는 모두 Docker, GPU, API 키 없이 돌아갑니다(`InMemoryFHIR`, `ScriptedLLM`, `HeuristicLLM`).
+테스트 128개는 모두 Docker, GPU, API 키 없이 돌아갑니다(`InMemoryFHIR`, `ScriptedLLM`, `HeuristicLLM`).
 
 ## 아키텍처
 
@@ -126,6 +126,20 @@ uv run python scripts/load_fhir_bundles.py .synthea/output/fhir
 | POST | `/v1/documents/lab-report/commit` | 사람이 검토한 결과를 FHIR Observation으로 저장(서버 재검증, `reviewed_by` 필수) |
 | POST | gateway `/v1/chat/completions` | OpenAI 호환. `x-routed-backend` 헤더, `/v1/backends`, `/metrics` |
 
+## 실측 결과 (qwen2.5:7b · 로컬 PC · 1차)
+
+Ryzen 7 9800X3D + Radeon RX 9060 XT 8GB(ROCm), Ollama, Q4_K_M. 합성 데이터만 사용. 원본은 [`results/qwen2.5-7b/`](results/qwen2.5-7b/README.md)에 있어요.
+
+| 항목 | 결과 | 비고 |
+|---|---|---|
+| 결정적 체크 통과 | **13/16 (81%)** | 응급 3/3 차단, 다른 환자 기록 실제 조회 0건 |
+| 체크 + Judge 통과 | 8/16 (50%) | 자기 채점 + 루브릭 v1이 올바른 거절을 감점해서 과소평가됨 |
+| 검사결과지 (OCR 텍스트 3건) | 항목 P/R 100%, 값 83%, 단위 100% | `I3.8`→`3.8` 조용한 오류 1건 발견 |
+| 단일 스트림 | TTFT 319 ms, 약 60 tok/s | Ollama가 순차 처리해서 동시성을 높여도 처리량이 그대로 |
+| 에이전트 지연 | p50 2.8 s / p95 10.0 s | 도구 호출을 포함한 여러 단계 |
+
+**실측에서 찾은 7가지 문제와 조치**는 [docs/eval-findings.md](docs/eval-findings.md)에 정리했어요. 중국어 답변, 도구를 부르지 않고 "확인해볼게요"로 끝나는 답변, 올바른 거절을 감점하는 Judge, OCR 값을 임의로 "교정"하는 문제 등이에요. 각 문제는 실제 출력을 그대로 재생하는 회귀 테스트(`tests/test_real_model_regressions.py`)로 막았어요. 효과는 2차 실측으로 확인할 예정이에요.
+
 ## 평가 결과 예시
 
 `docs/samples/`에 오프라인 대역 LLM으로 만든 리포트가 있습니다. 파이프라인 동작을 보여주기 위한 예시입니다.
@@ -143,7 +157,8 @@ CI는 `agent-eval` job에서 같은 스위트를 실행하고, 커밋된 baselin
 - [x] **3주차 문서 구조화**: VLM 또는 OCR+LLM 추출, 자가 수정, 정규화(LOINC·단위·판정), 사람 검토 후 FHIR 트랜잭션 저장, 필드 단위 평가
 - [x] **4주차 평가·관측**: Langfuse, LLM-as-a-Judge, 대량 실행 큐, 실패 분류, A/B 비교, drift, CI 품질 게이트
 - [x] **5~6주차 서빙·라우팅**: PHI 기반 라우터, 서킷 브레이커, 게이트웨이와 메트릭, 벤치마크 도구, vLLM·GKE 배포, 모델 도입 의사결정 프레임(`docs/serving.md`)
-- [ ] 실제 모델 평가 결과 채우기 — 로컬 PC에서 `scripts/run_real_eval.sh` 한 번으로 실행 ([가이드](docs/run-on-your-pc.md))
+- [x] 실제 모델 1차 실측 (qwen2.5:7b) → 실패 분석 → 하네스·평가 개선 ([findings](docs/eval-findings.md))
+- [ ] 2차 실측으로 개선 효과 확인, 별도 Judge 모델 사용, GPU 서버(vLLM) 벤치마크
 - [ ] 음식 사진 vision + 임베딩 검색, 게이트웨이 스트리밍 지원
 
 ## 한계 (솔직하게)

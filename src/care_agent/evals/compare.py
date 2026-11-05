@@ -16,7 +16,7 @@ import math
 from dataclasses import dataclass, field
 from typing import Any
 
-from care_agent.evals.runner import RunFile
+from care_agent.evals.runner import CaseResult, RunFile
 
 PSI_ALERT = 0.2
 EPS = 1e-4
@@ -39,8 +39,29 @@ def compare_runs(a: RunFile, b: RunFile, pairwise: dict[str, str] | None = None)
     ra = {r.case_id: r for r in a.results}
     rb = {r.case_id: r for r in b.results}
     common = sorted(set(ra) & set(rb))
-    regressions = [c for c in common if ra[c].passed and not rb[c].passed]
-    fixes = [c for c in common if not ra[c].passed and rb[c].passed]
+    warnings: list[str] = []
+    # A judged run fails cases an unjudged run would pass, so per-case regressions are
+    # only meaningful on the deterministic checks when the judge settings differ.
+    same_judge = bool(a.meta.get("judge")) == bool(b.meta.get("judge"))
+
+    def ok(r: CaseResult) -> bool:
+        if same_judge:
+            return r.passed
+        return r.checks_passed if r.checks_passed is not None else r.passed
+
+    if not same_judge:
+        warnings.append(
+            "judge settings differ between runs: regressions/fixes use deterministic checks only; "
+            "pass_rate is not comparable, use checks_pass_rate"
+        )
+    if (
+        a.meta.get("judge")
+        and b.meta.get("judge")
+        and a.meta.get("judge_model") != b.meta.get("judge_model")
+    ):
+        warnings.append("different judge models: judge score deltas are not comparable")
+    regressions = [c for c in common if ok(ra[c]) and not ok(rb[c])]
+    fixes = [c for c in common if not ok(ra[c]) and ok(rb[c])]
 
     def delta(x: float | None, y: float | None) -> float | None:
         return None if x is None or y is None else round(y - x, 3)
@@ -49,6 +70,11 @@ def compare_runs(a: RunFile, b: RunFile, pairwise: dict[str, str] | None = None)
         "a": a.meta.get("label"),
         "b": b.meta.get("label"),
         "cases_compared": len(common),
+        "checks_pass_rate": {
+            "a": sa.get("checks_pass_rate"),
+            "b": sb.get("checks_pass_rate"),
+            "delta": delta(sa.get("checks_pass_rate"), sb.get("checks_pass_rate")),
+        },
         "pass_rate": {
             "a": sa["pass_rate"],
             "b": sb["pass_rate"],
@@ -61,6 +87,7 @@ def compare_runs(a: RunFile, b: RunFile, pairwise: dict[str, str] | None = None)
         },
         "regressions": regressions,
         "fixes": fixes,
+        "warnings": warnings,
     }
     if pairwise:
         wins = [pairwise[c] for c in common if c in pairwise]

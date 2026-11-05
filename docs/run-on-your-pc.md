@@ -77,6 +77,8 @@ git add results/ && git commit -m "Add real-model eval results" && git push
 
 ## 문제 해결
 
+- 동시성 벤치마크에서 처리량이 늘지 않음: Ollama는 기본적으로 요청을 순차 처리해요. 병렬 처리를 보려면 Ollama를 `OLLAMA_NUM_PARALLEL=4`로 다시 시작하세요(VRAM이 더 필요해요). 운영 환경 수준의 측정은 vLLM으로 해야 해요.
+
 - `cannot reach .../models`: `ollama serve`가 실행 중인지 확인하세요(`ollama list`가 동작해야 함).
 - `judge_failures`가 많음: Judge 모델이 JSON 형식을 못 맞추는 것입니다. 더 큰 모델을 `JUDGE_MODEL`로 지정하세요.
 - 도구를 전혀 호출하지 않음: 해당 모델이 tool calling을 지원하는지 확인하세요(qwen2.5, llama3.1+ 지원).

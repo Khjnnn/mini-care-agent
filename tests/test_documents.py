@@ -22,6 +22,10 @@ def transcription(name: str) -> str:
     return (FIXTURES / f"{name}.json").read_text("utf-8")
 
 
+def ocr(name: str) -> str:
+    return (ROOT / "datasets" / "lab_reports" / f"{name}.ocr.txt").read_text("utf-8")
+
+
 @pytest.mark.parametrize(
     ("text", "value"),
     [("7.8", 7.8), ("1,234", 1234.0), ("7.8 H", 7.8), ("<5", None), ("음성", None), ("I3.8", None)],
@@ -62,7 +66,7 @@ def pipeline(fhir):
 
 
 async def test_unit_conversion_and_flags(pipeline):
-    out = await pipeline([final(transcription("02"))]).extract(text="...")
+    out = await pipeline([final(transcription("02"))]).extract(text=ocr("02"))
     by = {r.loinc: r for r in out.report.results}
     assert by["1558-6"].value == 109.9 and by["1558-6"].unit == "mg/dL"
     assert by["4548-4"].value == 6.08 and by["4548-4"].unit == "%"
@@ -73,7 +77,7 @@ async def test_unit_conversion_and_flags(pipeline):
 
 
 async def test_ocr_noise_is_flagged_not_guessed(pipeline):
-    out = await pipeline([final(transcription("03"))]).extract(text="...")
+    out = await pipeline([final(transcription("03"))]).extract(text=ocr("03"))
     by = {r.raw_name: r for r in out.report.results}
     assert by["혈색소"].value is None and by["LDL콜레스테롤"].value is None
     codes = [i.code for i in out.report.issues]
@@ -88,7 +92,7 @@ async def test_self_correction_after_invalid_output(pipeline):
         final(transcription("01")),
     ]
     p = pipeline(llm_steps)
-    out = await p.extract(text="...")
+    out = await p.extract(text=ocr("01"))
     assert out.report is not None and len(out.attempts) == 3
     assert [a.error is None for a in out.attempts] == [False, False, True]
     retry_prompt = p.extractor.llm.calls[2][-1]["content"]
@@ -125,7 +129,7 @@ async def test_commit_requires_review_then_writes_and_agent_sees_it(
     pipeline, registry, fhir_server
 ):
     p = pipeline([final(transcription("01"))])
-    report = (await p.extract(text="...")).report
+    report = (await p.extract(text=ocr("01"))).report
 
     with pytest.raises(ValueError):
         await p.commit(report, "demo-001", reviewed_by=" ")
@@ -134,14 +138,14 @@ async def test_commit_requires_review_then_writes_and_agent_sees_it(
     assert len(out.created) == 8 and all(c.startswith("Observation/") for c in out.created)
 
     a1c = await registry.get("get_recent_observations").invoke(
-        {"patient_id": "demo-001", "loinc_code": "4548-4", "limit": 1}
+        {"patient_id": "demo-001", "test": "4548-4", "limit": 1}
     )
     assert a1c[0]["value"] == 7.9 and a1c[0]["date"] == "2026-10-20"
 
 
 async def test_commit_revalidates_edited_report(pipeline):
     p = pipeline([final(transcription("01"))])
-    report = (await p.extract(text="...")).report
+    report = (await p.extract(text=ocr("01"))).report
     report.results[0].value = 79.0  # reviewer typo; issues list is not trusted
     report.issues = []
     with pytest.raises(ReviewRequired) as e:
@@ -151,14 +155,14 @@ async def test_commit_revalidates_edited_report(pipeline):
 
 async def test_hard_issues_cannot_be_acknowledged(pipeline):
     p = pipeline([final(transcription("03"))])
-    report = (await p.extract(text="...")).report
+    report = (await p.extract(text=ocr("03"))).report
     with pytest.raises(ReviewRequired):
         await p.commit(report, "demo-001", reviewed_by="x", acknowledge_issues=True)
 
 
 async def test_commit_unknown_patient_writes_nothing(pipeline, fhir_server):
     p = pipeline([final(transcription("01"))])
-    report = (await p.extract(text="...")).report
+    report = (await p.extract(text=ocr("01"))).report
     before = len(fhir_server.records)
     with pytest.raises(Exception, match="404"):
         await p.commit(report, "ghost", reviewed_by="x")
@@ -194,3 +198,40 @@ def test_schema_has_no_patient_identifier_fields():
         ExtractedLabReport.model_json_schema()["$defs"]["ExtractedLabItem"]["properties"]
     )
     assert not fields & {"patient_name", "name_of_patient", "rrn", "phone"}
+
+
+async def test_value_altered_from_source_is_flagged(pipeline):
+    """Regression from the qwen2.5:7b run: OCR 'I3.8' was transcribed as '3.8'."""
+    altered = json.loads(transcription("03"))
+    altered["items"][0]["value"] = "3.8"
+    out = await pipeline([final(json.dumps(altered, ensure_ascii=False))]).extract(text=ocr("03"))
+    flagged = [i for i in out.report.issues if i.code == "value_not_in_source"]
+    assert [i.item for i in flagged] == ["혈색소"]
+    assert out.needs_review
+
+
+def test_value_in_source_token_boundaries():
+    from care_agent.documents.normalize import value_in_source
+
+    assert value_in_source("7.9", "당화혈색소(HbA1c)      7.9       %")
+    assert not value_in_source("3.8", "혈색소        I3.8   g/dL")
+    assert not value_in_source("7", "7.9")
+    assert value_in_source("1,234", "결과 1,234 IU")
+
+
+async def test_silent_value_errors_metric(pipeline):
+    from care_agent.documents.evaluate import score_sample
+
+    expected = json.loads(
+        (ROOT / "datasets" / "lab_reports" / "03.expected.json").read_text("utf-8")
+    )
+    altered = json.loads(transcription("03"))
+    altered["items"][0]["value"] = "3.8"
+    raw = json.dumps(altered, ensure_ascii=False)
+    # without the source text (e.g. VLM path) the altered value is a silent error ...
+    blind = await pipeline([final(raw)]).extract(text=ocr("03"))
+    blind.report.issues = [i for i in blind.report.issues if i.code != "value_not_in_source"]
+    assert score_sample("03", blind, expected).silent_value_errors == 1
+    # ... with the grounding check it is caught and goes to human review
+    grounded = await pipeline([final(raw)]).extract(text=ocr("03"))
+    assert score_sample("03", grounded, expected).silent_value_errors == 0

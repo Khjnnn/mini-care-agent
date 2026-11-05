@@ -17,6 +17,7 @@ EventType = Literal[
     "tool_denied",
     "tool_error",
     "subagent",
+    "nudge",
     "output_gate",
     "final",
 ]

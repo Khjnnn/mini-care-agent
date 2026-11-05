@@ -29,9 +29,9 @@ _RULES: list[tuple[re.Pattern[str], str, dict[str, Any]]] = [
     (
         re.compile(r"당화|hba1c|a1c", re.I),
         "get_recent_observations",
-        {"loinc_code": "4548-4", "limit": 3},
+        {"test": "당화혈색소", "limit": 3},
     ),
-    (re.compile(r"ldl", re.I), "get_recent_observations", {"loinc_code": "18262-6", "limit": 3}),
+    (re.compile(r"ldl", re.I), "get_recent_observations", {"test": "LDL", "limit": 3}),
     (re.compile(r"혈압(?!약)"), "get_recent_observations", {"category": "vital-signs", "limit": 5}),
     (re.compile(r"약|복용|처방"), "list_medications", {}),
     (re.compile(r"질환|진단|병명"), "list_conditions", {}),

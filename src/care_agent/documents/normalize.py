@@ -221,9 +221,33 @@ def revalidate(report: StructuredLabReport) -> list[Issue]:
     return issues
 
 
-def normalize_report(report: ExtractedLabReport) -> StructuredLabReport:
+def value_in_source(value: str, source: str) -> bool:
+    """Does the transcribed value appear in the OCR text as a whole token?
+
+    '3.8' must not match inside 'I3.8': the first real-model run "corrected" the OCR
+    noise 'I3.8' to '3.8' — a plausible but wrong haemoglobin that no range check catches.
+    """
+    v = value.strip()
+    if not v:
+        return False
+    return re.search(rf"(?<![\w.,]){re.escape(v)}(?![\w.,])", source) is not None
+
+
+def normalize_report(
+    report: ExtractedLabReport, *, source_text: str | None = None
+) -> StructuredLabReport:
     issues: list[Issue] = []
     results = [_normalize_item(item, issues) for item in report.items]
+    if source_text is not None:
+        for item in report.items:
+            if not value_in_source(item.value, source_text):
+                issues.append(
+                    Issue(
+                        code="value_not_in_source",
+                        message=f"결과값 '{item.value}' 이(가) 원문 OCR 텍스트에 그대로 없습니다 (변형·환각 의심)",
+                        item=item.name,
+                    )
+                )
     if report.report_date is None:
         issues.append(Issue(code="missing_report_date", message="검사일을 찾지 못했습니다"))
     seen: set[str] = set()

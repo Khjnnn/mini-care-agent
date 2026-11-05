@@ -191,7 +191,15 @@ async def _eval_run(args: argparse.Namespace):  # -> RunFile
         on_result=on_result,
     )
     cases = await asyncio.to_thread(load_cases, args.dataset)
-    return await runner.run(cases, label=args.label, meta={"agent": args.agent, "llm": args.llm})
+    meta = {
+        "agent": args.agent,
+        "llm": args.llm,
+        "model": settings.llm_model if args.llm == "endpoint" else args.llm,
+        "judge_model": (os.getenv("JUDGE_MODEL") or settings.llm_model)
+        if args.judge in ("endpoint", "judge-endpoint")
+        else args.judge,
+    }
+    return await runner.run(cases, label=args.label, meta=meta)
 
 
 def _gateway(args: argparse.Namespace) -> int:

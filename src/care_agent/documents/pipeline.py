@@ -59,7 +59,11 @@ class LabReportPipeline:
         )
         if result.report is None:
             return ExtractOutcome(None, result.attempts, result.source, "extraction failed")
-        return ExtractOutcome(normalize_report(result.report), result.attempts, result.source)
+        return ExtractOutcome(
+            normalize_report(result.report, source_text=result.source_text),
+            result.attempts,
+            result.source,
+        )
 
     async def commit(
         self,

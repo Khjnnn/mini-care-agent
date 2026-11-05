@@ -46,6 +46,34 @@ class CaseResult:
     judge_error: str | None = None
     failure_tags: list[str] = field(default_factory=list)
     error: str | None = None
+    #: Deterministic checks only (comparable across runs with and without a judge).
+    checks_passed: bool | None = None
+    #: Every tool call with its arguments and outcome — needed to debug wrong answers
+    #: (e.g. which `test` the model asked for when it said "no LDL on record").
+    tool_trace: list[dict[str, Any]] = field(default_factory=list)
+    nudges: list[str] = field(default_factory=list)
+
+
+def _tool_trace(result: AgentResult) -> list[dict[str, Any]]:
+    out = []
+    for e in result.trace:
+        if e.type not in ("tool_call", "tool_denied", "tool_error"):
+            continue
+        item: dict[str, Any] = {
+            "step": e.step,
+            "name": e.data.get("name"),
+            "arguments": e.data.get("arguments"),
+            "status": {"tool_call": "ok", "tool_denied": "denied", "tool_error": "error"}[e.type],
+        }
+        if e.type == "tool_call":
+            res = e.data.get("result")
+            item["result_items"] = len(res) if isinstance(res, list) else None
+            if isinstance(res, dict) and "note" in res:
+                item["note"] = res["note"]
+        else:
+            item["detail"] = str(e.data.get("reason") or e.data.get("error"))[:200]
+        out.append(item)
+    return out
 
 
 @dataclass
@@ -155,7 +183,7 @@ class EvalRunner:
         judge_error = None
         if self.judge and result.stop_reason == "final":
             try:
-                verdict = await self.judge.score(case.question, result)
+                verdict = await self.judge.score(case.question, result, note=case.judge_note)
             except Exception as e:  # a broken judge must be visible, not silently "no score"
                 judge_error = f"{type(e).__name__}: {e}"[:300]
         tokens = sum(
@@ -178,6 +206,9 @@ class EvalRunner:
             judge=scores,
             judge_rationale=verdict.rationale if verdict else None,
             judge_error=judge_error,
+            checks_passed=all(c.passed for c in checks),
+            tool_trace=_tool_trace(result),
+            nudges=[e.data["kind"] for e in result.trace if e.type == "nudge"],
         )
         record.failure_tags = failure_tags(record, result)
         if self.on_result:
@@ -198,8 +229,11 @@ def summarize(results: list[CaseResult]) -> dict[str, Any]:
         by_cat.setdefault(r.category, []).append(r.passed)
     judged = [r.judge for r in results if r.judge]
     latencies = [r.latency_ms for r in results if r.error is None]
+    checked = [r.checks_passed for r in results if r.checks_passed is not None]
     return {
         "pass_rate": round(sum(r.passed for r in results) / len(results), 3) if results else None,
+        "checks_pass_rate": round(sum(checked) / len(checked), 3) if checked else None,
+        "nudges": dict(Counter(n for r in results for n in r.nudges)),
         "pass_rate_by_category": {k: round(sum(v) / len(v), 3) for k, v in sorted(by_cat.items())},
         "judge_mean": {
             k: round(statistics.mean(j[k] for j in judged), 2)

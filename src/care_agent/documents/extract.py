@@ -30,6 +30,7 @@ from care_agent.llm.jsonout import parse_json_object
 SYSTEM = """\
 당신은 한국어 건강검진·혈액검사 결과지를 그대로 옮겨 적는 전사(transcription) 도구입니다.
 - 결과지에 인쇄된 값만 옮기세요. 계산·추정·해석하지 마세요.
+- OCR 오류로 보이는 글자가 섞인 값(예: 'I3.8', '1O5')도 고치거나 지우지 말고 인쇄된 그대로 옮기세요.
 - 값, 단위, 참고치, 판정 표시(H/L/▲ 등)는 인쇄된 문자열 그대로 쓰세요.
 - 환자 이름, 주민등록번호, 연락처 등 개인정보는 옮기지 마세요.
 - 아래 JSON 스키마를 만족하는 JSON 객체 하나만 출력하세요. 설명이나 코드블록 없이 JSON만 출력합니다.
@@ -81,6 +82,8 @@ class ExtractionResult:
     report: ExtractedLabReport | None
     attempts: list[Attempt] = field(default_factory=list)
     source: str = "text"
+    #: OCR text the transcription was made from (None for the VLM path).
+    source_text: str | None = None
 
     @property
     def ok(self) -> bool:
@@ -98,7 +101,9 @@ class LabReportExtractor:
             "role": "user",
             "content": f"다음은 검사결과지 OCR 텍스트입니다.\n\n{text}",
         }
-        return await self._extract(user, source="text")
+        result = await self._extract(user, source="text")
+        result.source_text = text
+        return result
 
     async def from_image(self, image: bytes, mime: str = "image/png") -> ExtractionResult:
         if self.ocr is not None:

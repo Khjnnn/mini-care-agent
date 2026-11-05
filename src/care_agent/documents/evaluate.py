@@ -21,6 +21,7 @@ from statistics import mean
 from typing import Any
 
 from care_agent.documents.pipeline import ExtractOutcome, LabReportPipeline
+from care_agent.documents.schema import BLOCKING_ISSUES
 
 VALUE_TOLERANCE = 0.011  # values are rounded to 2 decimals after unit conversion
 
@@ -37,6 +38,8 @@ class SampleScore:
     flag_acc: float | None
     issue_recall: float | None
     attempts: int
+    #: Wrong values with no blocking issue on that item — would be saved without review.
+    silent_value_errors: int = 0
     errors: list[str] = field(default_factory=list)
 
 
@@ -65,12 +68,17 @@ def score_sample(name: str, outcome: ExtractOutcome, expected: dict[str, Any]) -
         return sum(ok) / len(ok) if ok else None
 
     values, units, flags = [], [], []
+    silent = 0
+    flagged_items = {i.item for i in report.issues if i.code in BLOCKING_ISSUES}
     for code in matched:
         p, e = pred[code], exp[code]
         v_ok = p.value is not None and abs(p.value - e["value"]) <= VALUE_TOLERANCE
         values.append(v_ok)
         units.append(p.unit == e["unit"])
         flags.append(p.interpretation == e["interpretation"])
+        if not v_ok and p.raw_name not in flagged_items:
+            silent += 1
+            errors.append(f"{code}: SILENT wrong value (no review issue)")
         if not v_ok:
             errors.append(f"{code}: value {p.value_text!r}→{p.value} != {e['value']}")
         if p.unit != e["unit"]:
@@ -95,6 +103,7 @@ def score_sample(name: str, outcome: ExtractOutcome, expected: dict[str, Any]) -
         unit_acc=ratio(units),
         flag_acc=ratio(flags),
         issue_recall=issue_recall,
+        silent_value_errors=silent,
         attempts=len(outcome.attempts),
         errors=errors,
     )
@@ -115,6 +124,7 @@ def summarize(scores: list[SampleScore]) -> dict[str, Any]:
         "unit_accuracy": avg("unit_acc"),
         "flag_accuracy": avg("flag_acc"),
         "issue_recall": avg("issue_recall"),
+        "silent_value_errors": sum(s.silent_value_errors for s in scores),
         "mean_attempts": avg("attempts"),
     }
 

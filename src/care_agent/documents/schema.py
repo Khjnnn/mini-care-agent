@@ -48,6 +48,7 @@ IssueCode = Literal[
     "missing_reference_range",
     "missing_report_date",
     "duplicate_test",
+    "value_not_in_source",
 ]
 
 #: Issues that block automatic saving; others are informational.
@@ -60,6 +61,7 @@ BLOCKING_ISSUES: frozenset[str] = frozenset(
         "flag_mismatch",
         "missing_report_date",
         "duplicate_test",
+        "value_not_in_source",
     }
 )
 
