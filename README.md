@@ -6,6 +6,8 @@
 
 [![ci](https://github.com/Khjnnn/mini-care-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Khjnnn/mini-care-agent/actions/workflows/ci.yml)
 
+**포트폴리오 페이지**: https://khjnnn.github.io/mini-care-agent/ (소스: [`site/index.html`](site/index.html))
+
 ---
 
 ## 한눈에 보기

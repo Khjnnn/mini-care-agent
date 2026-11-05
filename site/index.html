@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mini-care-agent — 포트폴리오</title>
+<meta name="description" content="합성 EHR(FHIR) 위에서 안전하게 동작하는 헬스케어 에이전트 플랫폼: harness, 안전 게이트, 검사결과지 구조화, LLM-as-a-Judge 평가, PHI 기반 LLM 라우팅">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root {
+  --bg: #fbfbf9; --surface: #ffffff; --surface-2: #f3f4f1; --ink: #17201d; --ink-2: #4a5550;
+  --ink-3: #7b8580; --line: #e3e6e1; --accent: #0f7b6c; --accent-soft: #e2f2ee; --warn: #b4531a;
+  --warn-soft: #fbeee4; --ok: #2f7d32; --code: #f1f3ef; --shadow: 0 1px 2px rgba(20,30,25,.05), 0 4px 16px rgba(20,30,25,.04);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1412; --surface: #151c19; --surface-2: #1b2420; --ink: #e7ece9; --ink-2: #b2bcb7;
+    --ink-3: #85908b; --line: #26312c; --accent: #4cc3ad; --accent-soft: #15302a; --warn: #f0a46c;
+    --warn-soft: #34231a; --ok: #7bc77f; --code: #19221e; --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1412; --surface: #151c19; --surface-2: #1b2420; --ink: #e7ece9; --ink-2: #b2bcb7;
+  --ink-3: #85908b; --line: #26312c; --accent: #4cc3ad; --accent-soft: #15302a; --warn: #f0a46c;
+  --warn-soft: #34231a; --ok: #7bc77f; --code: #19221e; --shadow: none;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-size: 16px; line-height: 1.7; -webkit-font-smoothing: antialiased; word-break: keep-all;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code, pre { font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace; font-size: .86em; }
+code { background: var(--code); padding: .1em .35em; border-radius: 4px; }
+pre { background: var(--code); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; overflow-x: auto; line-height: 1.55; margin: 0; }
+pre code { background: none; padding: 0; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+nav { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+nav .wrap { display: flex; align-items: center; gap: 20px; height: 56px; }
+nav .brand { font-weight: 700; color: var(--ink); letter-spacing: -.01em; }
+nav .links { display: flex; gap: 18px; margin-left: auto; font-size: 14px; }
+nav .links a { color: var(--ink-2); }
+nav .links a:hover { color: var(--accent); text-decoration: none; }
+header.hero { padding: 72px 0 48px; }
+.eyebrow { display: inline-block; font-size: 13px; font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: 4px 10px; border-radius: 999px; margin-bottom: 18px; }
+h1 { font-size: clamp(34px, 5vw, 52px); line-height: 1.15; letter-spacing: -.03em; margin: 0 0 16px; }
+.lede { font-size: clamp(17px, 2vw, 20px); color: var(--ink-2); max-width: 760px; margin: 0 0 28px; }
+.cta { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 10px; font-weight: 600; font-size: 15px; border: 1px solid var(--line); color: var(--ink); background: var(--surface); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.btn:hover { text-decoration: none; filter: brightness(1.05); }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 40px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; box-shadow: var(--shadow); }
+.stat b { display: block; font-size: 26px; letter-spacing: -.02em; line-height: 1.2; }
+.stat span { font-size: 13px; color: var(--ink-3); }
+section { padding: 56px 0; border-top: 1px solid var(--line); }
+h2 { font-size: clamp(24px, 3vw, 30px); letter-spacing: -.02em; margin: 0 0 8px; line-height: 1.3; }
+.sub { color: var(--ink-2); margin: 0 0 28px; max-width: 760px; }
+h3 { font-size: 18px; margin: 0 0 6px; letter-spacing: -.01em; }
+.grid { display: grid; gap: 16px; }
+.g2 { grid-template-columns: repeat(2, 1fr); }
+.g4 { grid-template-columns: repeat(4, 1fr); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; box-shadow: var(--shadow); }
+.card p { margin: 0; color: var(--ink-2); font-size: 15px; }
+.card .tag { font-size: 12px; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; display: block; }
+.card ul { margin: 8px 0 0; padding-left: 18px; color: var(--ink-2); font-size: 15px; }
+.card li { margin: 3px 0; }
+.files { margin-top: 10px; font-size: 13px; color: var(--ink-3); }
+table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 15px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 13px; color: var(--ink-3); font-weight: 600; background: var(--surface-2); }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 600; }
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.figure { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; overflow-x: auto; }
+.figure svg { display: block; width: 100%; min-width: 760px; height: auto; }
+.caption { font-size: 13px; color: var(--ink-3); margin-top: 10px; }
+svg .box { fill: var(--surface-2); stroke: var(--line); }
+svg .box.acc { fill: var(--accent-soft); stroke: var(--accent); }
+svg .box.warn { fill: var(--warn-soft); stroke: var(--warn); }
+svg .t { fill: var(--ink); font-size: 13px; font-weight: 600; font-family: inherit; }
+svg .s { fill: var(--ink-3); font-size: 11.5px; font-family: inherit; }
+svg .ln { stroke: var(--ink-3); stroke-width: 1.4; fill: none; }
+svg .ln.dash { stroke-dasharray: 5 4; }
+svg .ah { fill: var(--ink-3); }
+.flow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 14px 0 0; font-size: 14px; }
+.flow span { background: var(--surface-2); border: 1px solid var(--line); padding: 4px 10px; border-radius: 8px; }
+.flow i { color: var(--ink-3); font-style: normal; }
+.split { display: grid; grid-template-columns: 1.1fr .9fr; gap: 20px; align-items: start; }
+.shot { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff; }
+.shot img { display: block; width: 100%; height: auto; }
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+.pill.model { background: var(--warn-soft); color: var(--warn); }
+.pill.eval { background: var(--accent-soft); color: var(--accent); }
+.pill.tool { background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); }
+.callout { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 14px 18px; border-radius: 0 10px 10px 0; color: var(--ink); font-size: 15px; margin-top: 20px; }
+.decisions { counter-reset: d; display: grid; gap: 12px; grid-template-columns: repeat(2, 1fr); }
+.decisions .card { position: relative; padding-left: 58px; }
+.decisions .card::before { counter-increment: d; content: counter(d); position: absolute; left: 20px; top: 20px; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--bg); font-weight: 700; font-size: 14px; display: grid; place-items: center; }
+.stack { display: flex; flex-wrap: wrap; gap: 8px; }
+.stack span { font-size: 14px; padding: 5px 11px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); }
+footer { padding: 40px 0 60px; border-top: 1px solid var(--line); color: var(--ink-3); font-size: 14px; }
+.theme { background: none; border: 1px solid var(--line); color: var(--ink-2); border-radius: 8px; padding: 4px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+@media (max-width: 860px) {
+  .stats, .g4 { grid-template-columns: repeat(2, 1fr); }
+  .g2, .split, .decisions { grid-template-columns: 1fr; }
+  nav .links { display: none; }
+  nav .wrap { justify-content: space-between; }
+}
+@media (max-width: 480px) {
+  .wrap { padding: 0 16px; }
+  header.hero { padding: 48px 0 32px; }
+  .stats { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat b { font-size: 22px; }
+}
+</style>
+</head>
+<body>
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#">mini-care-agent</a>
+    <div class="links">
+      <a href="#map">역할 매핑</a><a href="#arch">아키텍처</a><a href="#safety">안전 설계</a>
+      <a href="#features">핵심 기능</a><a href="#loop">실측과 개선</a><a href="#decisions">설계 결정</a>
+    </div>
+    <button class="theme" id="theme" type="button" aria-label="테마 전환">테마</button>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="eyebrow">개인 프로젝트 · Healthcare AI Agent Platform</span>
+    <h1>합성 EHR 위에서 <span style="color:var(--accent)">안전하게</span> 동작하는<br>헬스케어 에이전트 플랫폼</h1>
+    <p class="lede">EHR(FHIR R4)을 이해하는 에이전트 harness부터 검사결과지 구조화, LLM-as-a-Judge 평가와 관측, 온프렘·클라우드를 넘나드는 PHI 기반 LLM 라우팅까지 end-to-end로 설계하고 구현했습니다. 실제 모델로 측정해 실패를 찾아내고, 그 실패를 하네스와 평가 개선으로 연결했습니다.</p>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/Khjnnn/mini-care-agent">GitHub 저장소</a>
+      <a class="btn" href="https://github.com/Khjnnn/mini-care-agent/blob/main/docs/eval-findings.md">실측 분석 리포트</a>
+      <a class="btn" href="https://github.com/Khjnnn/mini-care-agent/blob/main/docs/serving.md">서빙·라우팅 설계</a>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>4개</b><span>안전 게이트 (입력·도구·출력·라우팅)</span></div>
+      <div class="stat"><b>128</b><span>테스트 · GPU/Docker/API 키 없이 실행</span></div>
+      <div class="stat"><b>81%</b><span>qwen2.5:7b 실측 결정적 체크 통과 (1차)</span></div>
+      <div class="stat"><b>7건</b><span>실측으로 찾아 고친 실패 유형</span></div>
+    </div>
+  </div>
+</header>
+
+<section id="map">
+  <div class="wrap">
+    <h2>무엇을 만들었나</h2>
+    <p class="sub">헬스케어 AI 엔지니어 역할의 네 영역을 하나의 저장소에서 서로 연결된 시스템으로 구현했습니다.</p>
+    <div class="grid g2">
+      <div class="card">
+        <span class="tag">Agent &amp; Harness</span>
+        <h3>EHR 위의 general agent와 harness</h3>
+        <ul>
+          <li>bounded 에이전트 루프, 오류·거부를 모델에 돌려주는 복구형 설계</li>
+          <li>타입 힌트 하나로 스키마·검증·MCP 노출까지 만드는 tool registry</li>
+          <li>YAML 에이전트, 플러그인 skill, 하위 에이전트, 세션·환자 메모리</li>
+          <li>FastAPI agent API: 도구·에이전트 탐색, 요청 단위 쓰기 승인</li>
+        </ul>
+        <div class="files"><code>agent/</code> <code>tools/</code> <code>platform/</code> <code>memory/</code> <code>mcp_server.py</code></div>
+      </div>
+      <div class="card">
+        <span class="tag">LLM · 모델 서빙</span>
+        <h3>온프렘 GPU ↔ GCP를 넘나드는 라우팅</h3>
+        <ul>
+          <li>PHI 분류 기반 라우터: 환자 데이터는 온프렘·사설 VPC 백엔드로만 보냄</li>
+          <li>tier 힌트, 우선순위·비용·지연 정렬, 서킷 브레이커 폴백</li>
+          <li>OpenAI 호환 게이트웨이와 Prometheus 메트릭</li>
+          <li>TTFT/ITL 스트리밍 벤치마크, vLLM(DGX/B200)·GKE 배포 설정</li>
+        </ul>
+        <div class="files"><code>serving/</code> <code>deploy/</code> <code>docs/serving.md</code></div>
+      </div>
+      <div class="card">
+        <span class="tag">제품 AI 기능</span>
+        <h3>검사결과지 OCR → 구조화 → FHIR</h3>
+        <ul>
+          <li>VLM 또는 OCR+LLM 전사, 스키마 검증과 자가 수정</li>
+          <li>결정적 정규화: LOINC 매핑, 단위 변환, 참고범위·판정, 생리적 범위 검사</li>
+          <li>원문 대조로 값 변형 탐지, 사람 검토 후 단일 FHIR 트랜잭션으로 저장</li>
+        </ul>
+        <div class="files"><code>documents/</code> <code>knowledge/lab_catalog.py</code></div>
+      </div>
+      <div class="card">
+        <span class="tag">평가 · 관측</span>
+        <h3>품질 개선 사이클</h3>
+        <ul>
+          <li>회귀 스위트(사실·응급·인젝션·처방 유도·범위), 결정적 체크</li>
+          <li>LLM-as-a-Judge: 근거 기반 루브릭, 정답 기준 전달, pairwise A/B(위치 편향 보정)</li>
+          <li>대량 실행 큐, 실패 분류, drift(PSI), CI 품질 게이트, Langfuse 연동</li>
+        </ul>
+        <div class="files"><code>evals/</code> <code>observability/</code> <code>datasets/</code></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="arch">
+  <div class="wrap">
+    <h2>아키텍처</h2>
+    <p class="sub">모든 요청은 네 개의 게이트를 지나고, 모든 단계는 trace로 남아 평가와 관측의 단위가 됩니다.</p>
+    <div class="figure">
+      <svg viewBox="0 0 960 360" role="img" aria-label="시스템 아키텍처: 사용자 요청이 입력 게이트, 에이전트 루프, 도구 가드, 출력 게이트를 거치고, LLM 라우터가 온프렘과 클라우드 백엔드로 분배한다">
+        <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="ah"/></marker></defs>
+        <rect class="box" x="16" y="150" width="110" height="56" rx="10"/><text class="t" x="71" y="176" text-anchor="middle">사용자 / UI</text><text class="s" x="71" y="193" text-anchor="middle">FastAPI</text>
+        <rect class="box warn" x="156" y="150" width="120" height="56" rx="10"/><text class="t" x="216" y="176" text-anchor="middle">Input Gate</text><text class="s" x="216" y="193" text-anchor="middle">응급 → 119/109</text>
+        <rect class="box acc" x="306" y="132" width="150" height="92" rx="12"/><text class="t" x="381" y="168" text-anchor="middle">Agent Loop</text><text class="s" x="381" y="186" text-anchor="middle">bounded · nudge</text><text class="s" x="381" y="202" text-anchor="middle">RunContext(환자)</text>
+        <rect class="box warn" x="306" y="268" width="150" height="56" rx="10"/><text class="t" x="381" y="293" text-anchor="middle">Output Gate</text><text class="s" x="381" y="310" text-anchor="middle">PII 마스킹 · 처방성 표현</text>
+        <rect class="box warn" x="486" y="150" width="130" height="56" rx="10"/><text class="t" x="551" y="176" text-anchor="middle">Tool Guard</text><text class="s" x="551" y="193" text-anchor="middle">환자 범위 · 권한</text>
+        <rect class="box" x="646" y="96" width="140" height="44" rx="10"/><text class="t" x="716" y="123" text-anchor="middle">FHIR 도구</text>
+        <rect class="box" x="646" y="156" width="140" height="44" rx="10"/><text class="t" x="716" y="183" text-anchor="middle">Memory</text>
+        <rect class="box" x="646" y="216" width="140" height="44" rx="10"/><text class="t" x="716" y="243" text-anchor="middle">하위 에이전트</text>
+        <rect class="box" x="816" y="96" width="128" height="44" rx="10"/><text class="t" x="880" y="117" text-anchor="middle">HAPI FHIR</text><text class="s" x="880" y="132" text-anchor="middle">합성 데이터</text>
+        <rect class="box warn" x="306" y="20" width="150" height="56" rx="10"/><text class="t" x="381" y="45" text-anchor="middle">LLM Router</text><text class="s" x="381" y="62" text-anchor="middle">PHI 분류 · 폴백</text>
+        <rect class="box" x="496" y="14" width="120" height="30" rx="8"/><text class="s" x="556" y="34" text-anchor="middle">vLLM 온프렘 (PHI)</text>
+        <rect class="box" x="496" y="52" width="120" height="30" rx="8"/><text class="s" x="556" y="72" text-anchor="middle">vLLM GKE (PHI)</text>
+        <rect class="box" x="636" y="33" width="120" height="30" rx="8"/><text class="s" x="696" y="53" text-anchor="middle">Public API (비PHI)</text>
+        <rect class="box acc" x="816" y="216" width="128" height="44" rx="10"/><text class="t" x="880" y="237" text-anchor="middle">Trace</text><text class="s" x="880" y="252" text-anchor="middle">Eval · Langfuse</text>
+        <path class="ln" d="M126 178 H152" marker-end="url(#a)"/>
+        <path class="ln" d="M276 178 H302" marker-end="url(#a)"/>
+        <path class="ln" d="M456 178 H482" marker-end="url(#a)"/>
+        <path class="ln" d="M616 170 C630 150 630 125 642 120" marker-end="url(#a)"/>
+        <path class="ln" d="M616 178 H642" marker-end="url(#a)"/>
+        <path class="ln" d="M616 186 C630 205 630 232 642 236" marker-end="url(#a)"/>
+        <path class="ln" d="M786 118 H812" marker-end="url(#a)"/>
+        <path class="ln" d="M381 132 V80" marker-end="url(#a)"/>
+        <path class="ln" d="M456 40 H492" marker-end="url(#a)"/>
+        <path class="ln" d="M456 56 C470 62 480 66 492 67" marker-end="url(#a)"/>
+        <path class="ln dash" d="M616 48 H632" marker-end="url(#a)"/>
+        <path class="ln" d="M381 224 V264" marker-end="url(#a)"/>
+        <path class="ln dash" d="M456 208 C600 290 760 280 812 246" marker-end="url(#a)"/>
+      </svg>
+      <div class="caption">주황 = 안전 게이트, 초록 = 실행 핵심. 점선 = 조건부 경로(비PHI만 외부 API로, trace는 비동기로 내보냄).</div>
+    </div>
+  </div>
+</section>
+
+<section id="safety">
+  <div class="wrap">
+    <h2>안전 설계: 프롬프트가 아니라 코드로</h2>
+    <p class="sub">의료 데이터에서는 "모델이 알아서 지키겠지"가 통하지 않습니다. 지켜야 할 규칙은 모델이 바꿀 수 없는 위치에 두었습니다.</p>
+    <div class="grid g4">
+      <div class="card"><span class="tag">Input</span><h3>응급은 LLM을 부르지 않음</h3><p>흉통·의식 소실·자살 생각 등이 감지되면 모델이 만든 답 대신 고정 안내문(119/109)을 반환합니다. 오탐 비용이 미탐보다 작다는 판단입니다.</p></div>
+      <div class="card"><span class="tag">Tool Guard</span><h3>세션 = 한 명의 환자</h3><p>다른 <code>patient_id</code>로의 호출은 EHR에 닿기 전에 거부합니다. 하위 에이전트도 부모의 환자를 물려받습니다. 쓰기 도구는 요청마다 사람 승인이 필요합니다.</p></div>
+      <div class="card"><span class="tag">Output</span><h3>식별정보·처방 지시</h3><p>주민번호·전화번호·이메일을 마스킹하고, "약을 끊으세요"류 지시를 감지하면 주의 문구를 붙이고 trace에 플래그를 남깁니다.</p></div>
+      <div class="card"><span class="tag">Routing</span><h3>PHI는 외부로 안 나감</h3><p>도구 결과·환자 범위 프롬프트·PII·이미지가 있으면 PHI로 분류해 온프렘·사설 VPC로만 보냅니다. 장애가 나도 외부 API로 폴백하지 않습니다.</p></div>
+    </div>
+    <div class="callout"><b>데이터 최소화</b> · 도구는 이름·주소·연락처를 반환하지 않습니다. 환자 기록 도구가 없는 하위 에이전트(검사 설명)에는 환자 ID 자체를 주지 않습니다. 그래서 그 호출은 비PHI로 분류되어 저렴한 모델을 쓸 수 있습니다. 이 규칙은 에이전트 등록 단계에서 검증합니다.</div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <h2>핵심 기능</h2>
+    <p class="sub">사내 개발자가 기능을 올리는 방식부터 문서 구조화, 평가, 서빙까지 이어지는 흐름입니다.</p>
+
+    <div class="split" style="margin-bottom:28px">
+      <div>
+        <h3>도구 하나 = 함수 하나</h3>
+        <p style="color:var(--ink-2);margin:0 0 14px">타입 힌트에서 JSON 스키마와 인자 검증, MCP 노출이 자동으로 만들어집니다. <code>patient_id</code> 인자가 있으면 환자 범위 도구가 되어 Tool Guard가 적용됩니다. 에이전트는 YAML 하나로 등록하고, 존재하지 않는 도구나 하위 에이전트 순환은 로딩 시점에 거부합니다.</p>
+        <div class="flow"><span>READ</span><i>자동 실행</i><span>MEMORY</span><i>자동 + 감사</i><span>WRITE</span><i>사람 승인 · MCP 비공개</i></div>
+      </div>
+<pre><code>@registry.register
+async def get_recent_observations(
+    patient_id: PatientId,
+    test: Annotated[str | None, Field(
+        description="검사 이름 또는 LOINC. 예: 'LDL', '혈압'")] = None,
+    limit: Annotated[int, Field(ge=1, le=50)] = 10,
+) -> Any:
+    """환자의 검사결과·활력징후를 최신순으로 조회한다."""
+    ...</code></pre>
+    </div>
+
+    <div class="split" style="margin-bottom:28px">
+      <div>
+        <h3>검사결과지: 전사와 해석을 분리</h3>
+        <p style="color:var(--ink-2);margin:0">모델은 인쇄된 그대로만 옮겨 적습니다. LOINC 매핑, mmol/L→mg/dL·IFCC→NGSP 단위 변환, 판정은 결정적 코드가 맡습니다. OCR 잡음(<code>I3.8</code>, <code>1O5</code>)은 숫자로 추측하지 않고 검토 이슈로 올립니다. 저장 시에는 서버가 다시 검증하므로 클라이언트가 이슈를 지워도 통과할 수 없습니다.</p>
+        <div class="flow"><span>이미지</span><i>→</i><span>VLM · OCR+LLM</span><i>→</i><span>스키마·자가수정</span><i>→</i><span>정규화·원문 대조</span><i>→</i><span>사람 검토</span><i>→</i><span>FHIR 트랜잭션</span></div>
+      </div>
+      <figure style="margin:0">
+        <div class="shot"><img src="assets/lab-report-01.png" alt="합성 검사결과지 이미지 예시: 당화혈색소, 공복혈당, 콜레스테롤 등 8개 항목" loading="lazy"></div>
+        <figcaption class="caption">평가용 합성 검사결과지 (스캔한 듯한 노이즈를 넣어 생성)</figcaption>
+      </figure>
+    </div>
+
+    <div class="grid g2">
+      <div class="card">
+        <h3>평가: 결정적 체크 + LLM-as-a-Judge</h3>
+        <p>케이스마다 호출해야 할 도구와 금지 도구, 포함·금지 문구, 다른 환자 데이터 접근 여부를 결정적으로 검사합니다. Judge는 도구 결과를 근거로 받아 groundedness·safety·helpfulness·clarity를 채점합니다. A/B는 양방향으로 물어 위치 편향을 걸러내고, drift는 임계값과 PSI로 감지합니다. CI가 기준선 대비 drift가 생기면 실패합니다.</p>
+      </div>
+      <div class="card">
+        <h3>서빙: 측정 가능한 라우팅</h3>
+        <p>라우팅 결정(백엔드, 분류, 시도 내역, 지연)이 응답 메타데이터를 통해 trace와 Langfuse까지 남습니다. 벤치마크는 스트리밍으로 TTFT·ITL·처리량을 동시성 단계별로 측정하고, 같은 도구로 vLLM 직접 호출·게이트웨이 경유·클라우드 API를 비교합니다.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="loop">
+  <div class="wrap">
+    <h2>실측 → 실패 분석 → 개선</h2>
+    <p class="sub">qwen2.5:7b(Q4_K_M, Ollama, Radeon RX 9060 XT 8GB)로 전체 평가를 실행하고, 실패 출력을 회귀 테스트로 고정한 뒤 하네스와 평가 방법을 고쳤습니다. 데이터는 모두 합성입니다.</p>
+    <div class="grid g4" style="margin-bottom:20px">
+      <div class="stat"><b>13/16</b><span>결정적 체크 통과 (81%)</span></div>
+      <div class="stat"><b>3/3</b><span>응급 질문 차단</span></div>
+      <div class="stat"><b>0건</b><span>다른 환자 기록 실제 조회</span></div>
+      <div class="stat"><b>319 ms</b><span>TTFT · 약 60 tok/s (단일 스트림)</span></div>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>관찰한 실패</th><th>원인</th><th>조치</th></tr></thead>
+        <tbody>
+          <tr><td>약 목록을 <b>중국어</b>로 답함 ("二甲双胍片 500毫克…")</td><td><span class="pill model">모델</span></td><td>한자 비율을 감지해 한국어로 한 번 다시 쓰게 하는 nudge, <code>korean_only</code> 체크</td></tr>
+          <tr><td>"혈압 수치를 <b>확인해볼게요</b>"라고만 하고 도구 미호출</td><td><span class="pill model">모델</span></td><td>도구 없이 조회를 약속하며 끝나면 한 번 도구 호출을 요구하는 nudge</td></tr>
+          <tr><td>LDL을 조회해 놓고 "기록 없음"</td><td><span class="pill tool">도구</span></td><td>LOINC 대신 검사 이름을 받음. 빈 결과에는 기록에 있는 검사 목록을 안내. 도구 인자를 trace에 저장</td></tr>
+          <tr><td>OCR <code>I3.8</code>을 <code>3.8</code>로 "교정" → 검토 없이 통과</td><td><span class="pill model">모델</span></td><td>옮긴 값이 원문에 그대로 있는지 대조(<code>value_not_in_source</code>), 조용한 오류 지표 추가</td></tr>
+          <tr><td>올바른 거절에 Judge가 groundedness 1점</td><td><span class="pill eval">평가</span></td><td>루브릭 v2, 케이스별 정답 기준(<code>judge_note</code>) 전달, Judge 모델 분리 권장</td></tr>
+          <tr><td>Judge 있는 실행과 없는 기준선을 같은 기준으로 비교</td><td><span class="pill eval">평가</span></td><td>Judge와 무관한 <code>checks_pass_rate</code>, 조건이 다르면 비교 시 경고</td></tr>
+          <tr><td>동시성을 높여도 처리량이 그대로, TTFT만 증가</td><td><span class="pill tool">서빙</span></td><td>Ollama의 순차 처리 때문으로 확인. 병렬 서빙은 vLLM으로 측정하도록 문서화</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">실패 출력을 그대로 재생하는 회귀 테스트(<code>tests/test_real_model_regressions.py</code>)로 같은 실패가 다시 나오지 않게 했습니다. 개선 효과는 2차 실측으로 확인할 예정입니다. 루브릭이 바뀌었기 때문에 1·2차 비교는 Judge 점수가 아니라 결정적 체크 통과율로 합니다.</div>
+  </div>
+</section>
+
+<section id="decisions">
+  <div class="wrap">
+    <h2>설계 결정</h2>
+    <p class="sub">무엇을 만들었는지보다 왜 그렇게 만들었는지가 더 중요하다고 생각합니다.</p>
+    <div class="decisions">
+      <div class="card"><h3>도구 정의는 한 곳에서만</h3><p>함수 시그니처가 LLM 스키마, 인자 검증, MCP, 안전 게이트의 유일한 원천입니다. 정의가 두 벌이 되면 언젠가 어긋나기 때문입니다.</p></div>
+      <div class="card"><h3>실패는 예외가 아니라 결과</h3><p>도구 오류·거부·단계 한도 초과를 모델에 돌려주어 복구하게 하고, 실패 유형으로 집계해 평가와 drift의 단위로 씁니다.</p></div>
+      <div class="card"><h3>모델의 일은 좁게, 규칙은 코드로</h3><p>검사결과지에서 모델은 전사만 합니다. 의학적 판단(단위, 판정, 범위)은 테스트할 수 있는 결정적 코드에 둡니다.</p></div>
+      <div class="card"><h3>쓰기는 항상 사람을 거침</h3><p>저장할 때 서버가 다시 검증하고, 단일 트랜잭션으로 부분 저장을 막습니다. 검토자는 <code>reviewed_by</code>로 남습니다.</p></div>
+      <div class="card"><h3>가용성보다 데이터 경계</h3><p>PHI 백엔드가 모두 다운이면 실패를 반환합니다. 외부 API로 폴백하는 순간 데이터 유출이기 때문입니다. 명시적 라벨도 더 엄격한 쪽으로만 바꿀 수 있습니다.</p></div>
+      <div class="card"><h3>평가 자체도 검증 대상</h3><p>실측에서 Judge의 오판과 비교 기준의 불일치를 발견했습니다. 평가 방법의 결함도 모델 결함과 같은 방식으로 기록하고 고칩니다.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="stack">
+  <div class="wrap">
+    <h2>기술 스택과 품질</h2>
+    <p class="sub">약 5,000줄의 애플리케이션 코드와 약 1,500줄의 테스트. 테스트 128개는 인메모리 FHIR, 미리 정한 답을 내는 LLM, 규칙 기반 대역 LLM으로 외부 의존 없이 돌아갑니다.</p>
+    <div class="stack">
+      <span>Python 3.12+</span><span>FastAPI</span><span>Pydantic v2</span><span>httpx (async)</span><span>FHIR R4 · HAPI</span><span>Synthea</span><span>MCP (Python SDK 2.x)</span><span>vLLM</span><span>Ollama</span><span>GKE</span><span>Langfuse</span><span>Prometheus</span><span>SQLite</span><span>uv · ruff · pytest</span><span>GitHub Actions</span>
+    </div>
+    <div class="grid g2" style="margin-top:20px">
+      <div class="card"><h3>CI</h3><p>lint·format·테스트 job과 별도로 <code>agent-eval</code> job이 회귀 스위트를 실행하고, 커밋된 기준선 대비 drift가 생기면 빌드를 실패시킵니다.</p></div>
+      <div class="card"><h3>한계 (솔직하게)</h3><p>인증과 환자 단위 접근 권한은 데모 범위 밖입니다. 응급·처방 표현 감지는 규칙 기반입니다. GPU 서버 벤치마크와 검사결과지 대규모 평가는 아직입니다. 의료 기기나 의료 조언이 아닙니다.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    mini-care-agent · <a href="https://github.com/Khjnnn/mini-care-agent">github.com/Khjnnn/mini-care-agent</a> · 모든 환자 데이터는 합성 데이터입니다.
+  </div>
+</footer>
+
+<script>
+(function () {
+  var root = document.documentElement, btn = document.getElementById("theme");
+  function read() { try { return localStorage.getItem("theme"); } catch (e) { return null; } }
+  function write(v) { try { localStorage.setItem("theme", v); } catch (e) {} }
+  var saved = read();
+  if (saved) root.setAttribute("data-theme", saved);
+  btn.addEventListener("click", function () {
+    var cur = root.getAttribute("data-theme") ||
+      (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    var next = cur === "dark" ? "light" : "dark";
+    root.setAttribute("data-theme", next); write(next);
+  });
+})();
+</script>
+</body>
+</html>
