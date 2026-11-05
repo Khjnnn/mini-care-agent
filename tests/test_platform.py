@@ -1,3 +1,5 @@
+import json
+
 import httpx
 import pytest
 from pydantic import ValidationError
@@ -43,7 +45,25 @@ def test_spec_validation(make_platform):
     with pytest.raises(KeyError):
         platform.register_agent({"name": "x1", "description": "bad tool", "tools": ["nope"]})
     with pytest.raises(ValidationError):
-        platform.register_agent({"name": "x2", "description": "no slot", "system_prompt": "hi"})
+        platform.register_agent({"name": "x0", "description": "extra key", "toolz": []})
+    with pytest.raises(ValueError, match="patient_id"):
+        platform.register_agent(
+            {
+                "name": "x2",
+                "description": "no slot",
+                "tools": ["list_medications"],
+                "system_prompt": "hi",
+            }
+        )
+    # no patient-scoped tools → no patient id needed (and none is given to the model)
+    platform.register_agent(
+        {
+            "name": "x3",
+            "description": "general",
+            "tools": ["explain_lab_test"],
+            "system_prompt": "hi",
+        }
+    )
     platform.register_agent({"name": "a1", "description": "cycle a", "subagents": ["b1"]})
     platform.register_agent({"name": "b1", "description": "cycle b", "subagents": ["a1"]})
     with pytest.raises(ValueError, match="cycle"):
@@ -64,8 +84,8 @@ async def test_subagent_inherits_patient_scope_and_is_traced(make_platform):
     assert result.answer.startswith("parent:최근 2~3개월")
     sub = next(e for e in result.trace if e.type == "subagent")
     assert sub.data["agent"] == "lab_explainer" and sub.data["stop_reason"] == "final"
-    # the sub-agent was bound to the parent's patient, not one chosen by the model
-    assert "세션 환자: demo-001" in llm.calls[1][0]["content"]
+    # least privilege: the explainer never sees the patient id (so it can be routed as non-PHI)
+    assert "demo-001" not in json.dumps(llm.calls[1], ensure_ascii=False)
 
 
 async def test_plugin_tool_registration(make_platform):

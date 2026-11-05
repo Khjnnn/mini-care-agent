@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Annotated, Any
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 from care_agent.agent.loop import Agent, current_run
 from care_agent.agent.prompts import SYSTEM_PROMPT
@@ -50,13 +50,6 @@ class AgentSpec(BaseModel):
     memory: bool = True
     #: Hint for the LLM router (week 5): e.g. "small", "large".
     model: str | None = None
-
-    @field_validator("system_prompt")
-    @classmethod
-    def _has_patient_slot(cls, v: str) -> str:
-        if "{patient_id}" not in v:
-            raise ValueError("system_prompt must contain {patient_id}")
-        return v
 
 
 class Platform:
@@ -97,7 +90,14 @@ class Platform:
         spec = spec if isinstance(spec, AgentSpec) else AgentSpec.model_validate(spec)
         if spec.name in self.specs:
             raise ValueError(f"agent {spec.name!r} is already registered")
-        self.tools.subset(spec.tools)  # fail fast on unknown tools
+        tools = self.tools.subset(spec.tools)  # fail fast on unknown tools
+        # An agent that can read a patient's record must be told whose record it is.
+        # Agents without patient-scoped tools (e.g. lab_explainer) deliberately never
+        # see the patient id, so their requests can be routed as non-PHI.
+        if any(t.patient_scoped for t in tools) and "{patient_id}" not in spec.system_prompt:
+            raise ValueError(
+                f"agent {spec.name!r} uses patient-scoped tools; system_prompt needs {{patient_id}}"
+            )
         self.specs[spec.name] = spec
         return spec
 
@@ -125,8 +125,10 @@ class Platform:
         tools = self.tools.subset(spec.tools)
         for sub in spec.subagents:
             tools.add(self._subagent_tool(sub, llm))
+        base = llm or self.llm
+        with_hint = getattr(base, "with_hint", None)  # the router honours the tier hint
         return Agent(
-            llm or self.llm,
+            with_hint(spec.model) if callable(with_hint) and spec.model else base,
             tools,
             name=spec.name,
             system_prompt=spec.system_prompt,

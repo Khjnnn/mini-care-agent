@@ -15,6 +15,8 @@ import json
 import sys
 from pathlib import Path
 
+import httpx
+
 from care_agent.config import Settings
 from care_agent.fhir.client import FHIRClient
 from care_agent.fhir.memory_server import InMemoryFHIR
@@ -183,6 +185,43 @@ async def _eval_run(args: argparse.Namespace):  # -> RunFile
     return await runner.run(cases, label=args.label, meta={"agent": args.agent, "llm": args.llm})
 
 
+def _gateway(args: argparse.Namespace) -> int:
+    import uvicorn
+
+    from care_agent.serving.gateway import create_gateway
+    from care_agent.serving.router import RoutingLLM
+
+    uvicorn.run(create_gateway(RoutingLLM.from_yaml(args.config)), host=args.host, port=args.port)
+    return 0
+
+
+def _bench(args: argparse.Namespace) -> int:
+    import os
+
+    from care_agent.serving.bench import markdown_table, run_bench
+
+    prompts = None
+    if args.prompts:
+        lines = Path(args.prompts).read_text("utf-8").splitlines()
+        prompts = [json.loads(line)["prompt"] for line in lines if line.strip()]
+    result = asyncio.run(
+        run_bench(
+            args.base_url,
+            args.model,
+            concurrency_levels=args.concurrency,
+            requests=args.requests,
+            max_tokens=args.max_tokens,
+            prompts=prompts,
+            api_key=os.getenv(args.api_key_env, "EMPTY") if args.api_key_env else "EMPTY",
+        )
+    )
+    if args.out:
+        Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.out).write_text(json.dumps(result, ensure_ascii=False, indent=2), "utf-8")
+    print(markdown_table(result))
+    return 0
+
+
 _IMAGE_MIME = {
     ".png": "image/png",
     ".jpg": "image/jpeg",
@@ -273,6 +312,23 @@ def main(argv: list[str] | None = None) -> int:
     serve.add_argument("--port", type=int, default=8100)
     serve.add_argument("--llm", choices=LLM_CHOICES, default="endpoint")
 
+    gw = sub.add_parser("gateway", help="OpenAI-compatible LLM gateway with PHI-aware routing")
+    gw.add_argument("--config", default="deploy/router.example.yaml")
+    gw.add_argument("--host", default="127.0.0.1")
+    gw.add_argument("--port", type=int, default=8200)
+
+    bench = sub.add_parser(
+        "bench", help="TTFT/ITL/throughput benchmark of an OpenAI-compatible endpoint"
+    )
+    bench.add_argument("--base-url", required=True)
+    bench.add_argument("--model", required=True)
+    bench.add_argument("--concurrency", type=int, nargs="+", default=[1, 4, 16])
+    bench.add_argument("--requests", type=int, default=32, help="requests per concurrency level")
+    bench.add_argument("--max-tokens", type=int, default=256)
+    bench.add_argument("--prompts", help='JSONL with {"prompt": ...} per line')
+    bench.add_argument("--api-key-env", help="env var holding the API key")
+    bench.add_argument("--out", help="write raw results as JSON")
+
     args = parser.parse_args(argv)
     handlers = {
         "ask": lambda a: asyncio.run(_ask(a)),
@@ -281,8 +337,18 @@ def main(argv: list[str] | None = None) -> int:
         "serve": _serve,
         "docs": _docs,
         "eval": _eval,
+        "gateway": _gateway,
+        "bench": _bench,
     }
-    return handlers[args.cmd](args)
+    try:
+        return handlers[args.cmd](args)
+    except httpx.ConnectError as e:
+        print(
+            f"error: could not reach {e.request.url.host}:{e.request.url.port} — is the LLM/FHIR "
+            "endpoint running? (LLM_BASE_URL / FHIR_BASE_URL, or --offline / --llm heuristic-*)",
+            file=sys.stderr,
+        )
+        return 2
 
 
 if __name__ == "__main__":

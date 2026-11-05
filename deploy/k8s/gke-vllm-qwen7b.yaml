@@ -1,0 +1,77 @@
+# vLLM on GKE (L4 node pool) — the `gke-l4-qwen7b` backend in deploy/router.example.yaml.
+# Internal-only Service: reachable from the VPC / on-prem over Interconnect, not the internet.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: llm
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hf-cache
+  namespace: llm
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 100Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-qwen7b
+  namespace: llm
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: vllm-qwen7b }
+  template:
+    metadata:
+      labels: { app: vllm-qwen7b }
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-accelerator: nvidia-l4
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai:v0.10.1
+          args:
+            - --model=Qwen/Qwen2.5-7B-Instruct
+            - --max-model-len=16384
+            - --gpu-memory-utilization=0.90
+            - --enable-prefix-caching
+            - --enable-auto-tool-choice
+            - --tool-call-parser=hermes
+          ports:
+            - containerPort: 8000
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+          readinessProbe:
+            httpGet: { path: /health, port: 8000 }
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health, port: 8000 }
+            initialDelaySeconds: 600
+            periodSeconds: 30
+          volumeMounts:
+            - { name: hf-cache, mountPath: /root/.cache/huggingface }
+            - { name: shm, mountPath: /dev/shm }
+      volumes:
+        - name: hf-cache
+          persistentVolumeClaim: { claimName: hf-cache }
+        - name: shm
+          emptyDir: { medium: Memory, sizeLimit: 8Gi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm-qwen7b
+  namespace: llm
+  annotations:
+    networking.gke.io/load-balancer-type: Internal
+spec:
+  selector: { app: vllm-qwen7b }
+  ports:
+    - port: 8000
+      targetPort: 8000

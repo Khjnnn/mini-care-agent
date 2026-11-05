@@ -24,6 +24,8 @@ class LLMResponse:
     tool_calls: list[ToolCall] = field(default_factory=list)
     usage: dict[str, int] = field(default_factory=dict)
     model: str | None = None
+    #: Free-form metadata from wrappers, e.g. the router's decision.
+    meta: dict[str, Any] = field(default_factory=dict)
 
     def as_message(self) -> Message:
         msg: Message = {"role": "assistant", "content": self.content}

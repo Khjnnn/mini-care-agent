@@ -166,6 +166,7 @@ class Agent:
                         "usage": resp.usage,
                         "content": resp.content,
                         "tool_calls": [tc.name for tc in resp.tool_calls],
+                        **({"routing": resp.meta["routing"]} if "routing" in resp.meta else {}),
                     },
                     step=step,
                     duration_ms=_ms(t0),

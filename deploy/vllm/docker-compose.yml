@@ -1,0 +1,41 @@
+# vLLM on a single on-prem GPU node (DGX H100 / B200).
+#
+#   MODEL=Qwen/Qwen2.5-72B-Instruct TP=8 docker compose -f deploy/vllm/docker-compose.yml up -d
+#   care-agent bench --base-url http://localhost:8000/v1 --model $MODEL --concurrency 1 8 32 64
+#
+# Flags that matter for this project:
+#   --enable-auto-tool-choice --tool-call-parser hermes  → OpenAI tool calling (agent loop)
+#   --enable-prefix-caching   → the long system prompt + tool schemas are shared across turns
+#   --max-model-len           → cap context to what the agent needs; frees KV cache for batching
+#   --gpu-memory-utilization  → leave headroom on shared nodes
+services:
+  vllm:
+    image: vllm/vllm-openai:v0.10.1
+    ipc: host
+    ports:
+      - "8000:8000"
+    environment:
+      HF_TOKEN: ${HF_TOKEN:-}
+    volumes:
+      - ${HF_CACHE:-~/.cache/huggingface}:/root/.cache/huggingface
+    command:
+      - --model=${MODEL:-Qwen/Qwen2.5-7B-Instruct}
+      - --served-model-name=${SERVED_NAME:-${MODEL:-Qwen/Qwen2.5-7B-Instruct}}
+      - --tensor-parallel-size=${TP:-1}
+      - --max-model-len=${MAX_LEN:-16384}
+      - --gpu-memory-utilization=${GPU_UTIL:-0.90}
+      - --enable-prefix-caching
+      - --enable-auto-tool-choice
+      - --tool-call-parser=hermes
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 40   # large models take minutes to load

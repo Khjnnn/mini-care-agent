@@ -1,0 +1,59 @@
+# Router config: which backends exist and what they may receive.
+#
+#   ROUTER_CONFIG=deploy/router.example.yaml care-agent serve      # agents use the router
+#   care-agent gateway --config deploy/router.example.yaml          # OpenAI-compatible gateway
+#
+# phi_allowed is the security boundary: only backends inside the hospital/VPC trust
+# boundary may receive patient data. Public APIs get de-identified, patient-free traffic
+# (e.g. the lab_explainer sub-agent, general questions) — never PHI, even on failover.
+backends:
+  # On-prem DGX H100 node, tensor-parallel 72B for the main counselling agent.
+  - name: dgx-h100-qwen72b
+    base_url: http://dgx-h100.internal:8000/v1
+    model: Qwen/Qwen2.5-72B-Instruct
+    location: onprem
+    phi_allowed: true
+    tier: large
+    priority: 10
+    cost_per_1k_input: 0.0     # amortised hardware; track utilisation instead
+    cost_per_1k_output: 0.0
+    timeout_s: 60
+
+  # On-prem B200 node — same tier, used when the DGX node is saturated or down.
+  - name: b200-qwen72b
+    base_url: http://b200.internal:8000/v1
+    model: Qwen/Qwen2.5-72B-Instruct
+    location: onprem
+    phi_allowed: true
+    tier: large
+    priority: 20
+    timeout_s: 60
+
+  # GKE (private VPC, Cloud Interconnect to on-prem) L4 pool for small/fast models.
+  - name: gke-l4-qwen7b
+    base_url: http://vllm-qwen7b.llm.svc.cluster.local:8000/v1
+    model: Qwen/Qwen2.5-7B-Instruct
+    location: private_cloud
+    phi_allowed: true
+    tier: small
+    priority: 10
+    cost_per_1k_input: 0.00005
+    cost_per_1k_output: 0.0002
+    timeout_s: 30
+
+  # Public API: non-PHI traffic only (and capacity overflow for it).
+  - name: public-api
+    base_url: https://api.example-llm.com/v1
+    model: frontier-model
+    location: public_cloud
+    phi_allowed: false
+    tier: small
+    priority: 50
+    cost_per_1k_input: 0.003
+    cost_per_1k_output: 0.015
+    api_key_env: PUBLIC_LLM_API_KEY
+    timeout_s: 30
+
+policy:
+  failure_threshold: 3   # consecutive failures before the breaker opens
+  cooldown_s: 30         # then one probe request is let through (half-open)
