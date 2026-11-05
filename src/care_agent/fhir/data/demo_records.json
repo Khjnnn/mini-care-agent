@@ -1,0 +1,695 @@
+{
+ "_comment": "Hand-written SYNTHETIC records for tests and the offline demo. Not real patients.",
+ "resources": [
+  {
+   "resourceType": "Patient",
+   "id": "demo-001",
+   "gender": "male",
+   "birthDate": "1968-03-14",
+   "name": [
+    {
+     "family": "Synthetic",
+     "given": [
+      "Demo"
+     ]
+    }
+   ],
+   "address": [
+    {
+     "city": "Nowhere (synthetic)"
+    }
+   ],
+   "telecom": [
+    {
+     "system": "phone",
+     "value": "555-0100"
+    }
+   ]
+  },
+  {
+   "resourceType": "Patient",
+   "id": "demo-002",
+   "gender": "female",
+   "birthDate": "1990-11-02",
+   "name": [
+    {
+     "family": "Synthetic",
+     "given": [
+      "Other"
+     ]
+    }
+   ]
+  },
+  {
+   "resourceType": "Condition",
+   "id": "c1",
+   "subject": {
+    "reference": "Patient/demo-001"
+   },
+   "clinicalStatus": {
+    "coding": [
+     {
+      "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+      "code": "active"
+     }
+    ]
+   },
+   "code": {
+    "coding": [
+     {
+      "system": "http://snomed.info/sct",
+      "code": "59621000",
+      "display": "Essential hypertension (disorder)"
+     }
+    ],
+    "text": "Essential hypertension (disorder)"
+   },
+   "onsetDateTime": "2015-06-02T09:00:00+09:00"
+  },
+  {
+   "resourceType": "Condition",
+   "id": "c2",
+   "subject": {
+    "reference": "Patient/demo-001"
+   },
+   "clinicalStatus": {
+    "coding": [
+     {
+      "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+      "code": "active"
+     }
+    ]
+   },
+   "code": {
+    "coding": [
+     {
+      "system": "http://snomed.info/sct",
+      "code": "44054006",
+      "display": "Diabetes mellitus type 2 (disorder)"
+     }
+    ],
+    "text": "Diabetes mellitus type 2 (disorder)"
+   },
+   "onsetDateTime": "2019-04-18T09:00:00+09:00"
+  },
+  {
+   "resourceType": "Condition",
+   "id": "c3",
+   "subject": {
+    "reference": "Patient/demo-001"
+   },
+   "clinicalStatus": {
+    "coding": [
+     {
+      "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+      "code": "resolved"
+     }
+    ]
+   },
+   "code": {
+    "coding": [
+     {
+      "system": "http://snomed.info/sct",
+      "code": "714628002",
+      "display": "Prediabetes (finding)"
+     }
+    ],
+    "text": "Prediabetes (finding)"
+   },
+   "onsetDateTime": "2016-01-10T09:00:00+09:00",
+   "abatementDateTime": "2019-04-18T09:00:00+09:00"
+  },
+  {
+   "resourceType": "Condition",
+   "id": "c4",
+   "subject": {
+    "reference": "Patient/demo-002"
+   },
+   "clinicalStatus": {
+    "coding": [
+     {
+      "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+      "code": "active"
+     }
+    ]
+   },
+   "code": {
+    "coding": [
+     {
+      "system": "http://snomed.info/sct",
+      "code": "195967001",
+      "display": "Asthma (disorder)"
+     }
+    ],
+    "text": "Asthma (disorder)"
+   },
+   "onsetDateTime": "2004-05-01T09:00:00+09:00"
+  },
+  {
+   "resourceType": "Observation",
+   "id": "o1",
+   "status": "final",
+   "subject": {
+    "reference": "Patient/demo-001"
+   },
+   "category": [
+    {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+       "code": "laboratory"
+      }
+     ]
+    }
+   ],
+   "code": {
+    "coding": [
+     {
+      "system": "http://loinc.org",
+      "code": "4548-4",
+      "display": "Hemoglobin A1c/Hemoglobin.total in Blood"
+     }
+    ],
+    "text": "Hemoglobin A1c/Hemoglobin.total in Blood"
+   },
+   "effectiveDateTime": "2026-03-10T08:30:00+09:00",
+   "valueQuantity": {
+    "value": 7.2,
+    "unit": "%"
+   },
+   "referenceRange": [
+    {
+     "low": {
+      "value": 4.0
+     },
+     "high": {
+      "value": 5.6
+     }
+    }
+   ],
+   "interpretation": [
+    {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+       "code": "H",
+       "display": "High"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "resourceType": "Observation",
+   "id": "o2",
+   "status": "final",
+   "subject": {
+    "reference": "Patient/demo-001"
+   },
+   "category": [
+    {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+       "code": "laboratory"
+      }
+     ]
+    }
+   ],
+   "code": {
+    "coding": [
+     {
+      "system": "http://loinc.org",
+      "code": "4548-4",
+      "display": "Hemoglobin A1c/Hemoglobin.total in Blood"
+     }
+    ],
+    "text": "Hemoglobin A1c/Hemoglobin.total in Blood"
+   },
+   "effectiveDateTime": "2026-09-15T08:30:00+09:00",
+   "valueQuantity": {
+    "value": 7.8,
+    "unit": "%"
+   },
+   "referenceRange": [
+    {
+     "low": {
+      "value": 4.0
+     },
+     "high": {
+      "value": 5.6
+     }
+    }
+   ],
+   "interpretation": [
+    {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+       "code": "H",
+       "display": "High"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "resourceType": "Observation",
+   "id": "o3",
+   "status": "final",
+   "subject": {
+    "reference": "Patient/demo-001"
+   },
+   "category": [
+    {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+       "code": "laboratory"
+      }
+     ]
+    }
+   ],
+   "code": {
+    "coding": [
+     {
+      "system": "http://loinc.org",
+      "code": "1558-6",
+      "display": "Fasting glucose [Mass/volume] in Serum or Plasma"
+     }
+    ],
+    "text": "Fasting glucose [Mass/volume] in Serum or Plasma"
+   },
+   "effectiveDateTime": "2026-09-15T08:30:00+09:00",
+   "valueQuantity": {
+    "value": 142,
+    "unit": "mg/dL"
+   },
+   "referenceRange": [
+    {
+     "low": {
+      "value": 70
+     },
+     "high": {
+      "value": 99
+     }
+    }
+   ],
+   "interpretation": [
+    {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+       "code": "H",
+       "display": "High"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "resourceType": "Observation",
+   "id": "o4",
+   "status": "final",
+   "subject": {
+    "reference": "Patient/demo-001"
+   },
+   "category": [
+    {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+       "code": "laboratory"
+      }
+     ]
+    }
+   ],
+   "code": {
+    "coding": [
+     {
+      "system": "http://loinc.org",
+      "code": "18262-6",
+      "display": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by Direct assay"
+     }
+    ],
+    "text": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by Direct assay"
+   },
+   "effectiveDateTime": "2026-09-15T08:30:00+09:00",
+   "valueQuantity": {
+    "value": 162,
+    "unit": "mg/dL"
+   },
+   "referenceRange": [
+    {
+     "high": {
+      "value": 130
+     }
+    }
+   ],
+   "interpretation": [
+    {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+       "code": "H",
+       "display": "High"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "resourceType": "Observation",
+   "id": "o5",
+   "status": "final",
+   "subject": {
+    "reference": "Patient/demo-001"
+   },
+   "category": [
+    {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+       "code": "laboratory"
+      }
+     ]
+    }
+   ],
+   "code": {
+    "coding": [
+     {
+      "system": "http://loinc.org",
+      "code": "33914-3",
+      "display": "Glomerular filtration rate/1.73 sq M.predicted"
+     }
+    ],
+    "text": "Glomerular filtration rate/1.73 sq M.predicted"
+   },
+   "effectiveDateTime": "2026-09-15T08:30:00+09:00",
+   "valueQuantity": {
+    "value": 78,
+    "unit": "mL/min/{1.73_m2}"
+   },
+   "referenceRange": [
+    {
+     "low": {
+      "value": 60
+     }
+    }
+   ],
+   "interpretation": [
+    {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+       "code": "N",
+       "display": "Normal"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "resourceType": "Observation",
+   "id": "o6",
+   "status": "final",
+   "subject": {
+    "reference": "Patient/demo-001"
+   },
+   "category": [
+    {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+       "code": "vital-signs"
+      }
+     ]
+    }
+   ],
+   "code": {
+    "coding": [
+     {
+      "system": "http://loinc.org",
+      "code": "85354-9",
+      "display": "Blood pressure panel with all children optional"
+     }
+    ],
+    "text": "Blood pressure panel with all children optional"
+   },
+   "effectiveDateTime": "2026-09-15T08:10:00+09:00",
+   "component": [
+    {
+     "code": {
+      "coding": [
+       {
+        "system": "http://loinc.org",
+        "code": "8480-6",
+        "display": "Systolic blood pressure"
+       }
+      ]
+     },
+     "valueQuantity": {
+      "value": 148,
+      "unit": "mm[Hg]"
+     }
+    },
+    {
+     "code": {
+      "coding": [
+       {
+        "system": "http://loinc.org",
+        "code": "8462-4",
+        "display": "Diastolic blood pressure"
+       }
+      ]
+     },
+     "valueQuantity": {
+      "value": 92,
+      "unit": "mm[Hg]"
+     }
+    }
+   ]
+  },
+  {
+   "resourceType": "Observation",
+   "id": "o7",
+   "status": "final",
+   "subject": {
+    "reference": "Patient/demo-001"
+   },
+   "category": [
+    {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+       "code": "vital-signs"
+      }
+     ]
+    }
+   ],
+   "code": {
+    "coding": [
+     {
+      "system": "http://loinc.org",
+      "code": "29463-7",
+      "display": "Body weight"
+     }
+    ],
+    "text": "Body weight"
+   },
+   "effectiveDateTime": "2026-09-15T08:05:00+09:00",
+   "valueQuantity": {
+    "value": 82.4,
+    "unit": "kg"
+   }
+  },
+  {
+   "resourceType": "Observation",
+   "id": "o8",
+   "status": "final",
+   "subject": {
+    "reference": "Patient/demo-001"
+   },
+   "category": [
+    {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+       "code": "vital-signs"
+      }
+     ]
+    }
+   ],
+   "code": {
+    "coding": [
+     {
+      "system": "http://loinc.org",
+      "code": "39156-5",
+      "display": "Body mass index (BMI) [Ratio]"
+     }
+    ],
+    "text": "Body mass index (BMI) [Ratio]"
+   },
+   "effectiveDateTime": "2026-09-15T08:05:00+09:00",
+   "valueQuantity": {
+    "value": 27.9,
+    "unit": "kg/m2"
+   }
+  },
+  {
+   "resourceType": "Observation",
+   "id": "o9",
+   "status": "final",
+   "subject": {
+    "reference": "Patient/demo-002"
+   },
+   "category": [
+    {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+       "code": "vital-signs"
+      }
+     ]
+    }
+   ],
+   "code": {
+    "coding": [
+     {
+      "system": "http://loinc.org",
+      "code": "29463-7",
+      "display": "Body weight"
+     }
+    ],
+    "text": "Body weight"
+   },
+   "effectiveDateTime": "2026-08-01T10:00:00+09:00",
+   "valueQuantity": {
+    "value": 58.0,
+    "unit": "kg"
+   }
+  },
+  {
+   "resourceType": "MedicationRequest",
+   "id": "m1",
+   "status": "active",
+   "intent": "order",
+   "subject": {
+    "reference": "Patient/demo-001"
+   },
+   "medicationCodeableConcept": {
+    "coding": [
+     {
+      "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+      "code": "860975",
+      "display": "Metformin hydrochloride 500 MG Oral Tablet"
+     }
+    ],
+    "text": "Metformin hydrochloride 500 MG Oral Tablet"
+   },
+   "authoredOn": "2019-04-20T10:00:00+09:00",
+   "dosageInstruction": [
+    {
+     "text": "1 tablet twice daily with meals"
+    }
+   ],
+   "reasonCode": [
+    {
+     "coding": [
+      {
+       "system": "http://snomed.info/sct",
+       "code": "44054006",
+       "display": "Diabetes mellitus type 2 (disorder)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "resourceType": "MedicationRequest",
+   "id": "m2",
+   "status": "active",
+   "intent": "order",
+   "subject": {
+    "reference": "Patient/demo-001"
+   },
+   "medicationCodeableConcept": {
+    "coding": [
+     {
+      "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+      "code": "314076",
+      "display": "Lisinopril 10 MG Oral Tablet"
+     }
+    ],
+    "text": "Lisinopril 10 MG Oral Tablet"
+   },
+   "authoredOn": "2015-06-05T10:00:00+09:00",
+   "dosageInstruction": [
+    {
+     "text": "1 tablet once daily"
+    }
+   ],
+   "reasonCode": [
+    {
+     "coding": [
+      {
+       "system": "http://snomed.info/sct",
+       "code": "59621000",
+       "display": "Essential hypertension (disorder)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "resourceType": "MedicationRequest",
+   "id": "m3",
+   "status": "stopped",
+   "intent": "order",
+   "subject": {
+    "reference": "Patient/demo-001"
+   },
+   "medicationCodeableConcept": {
+    "coding": [
+     {
+      "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+      "code": "617312",
+      "display": "Atorvastatin 10 MG Oral Tablet"
+     }
+    ],
+    "text": "Atorvastatin 10 MG Oral Tablet"
+   },
+   "authoredOn": "2020-02-01T10:00:00+09:00",
+   "dosageInstruction": [
+    {
+     "text": "1 tablet at bedtime"
+    }
+   ]
+  },
+  {
+   "resourceType": "MedicationRequest",
+   "id": "m4",
+   "status": "active",
+   "intent": "order",
+   "subject": {
+    "reference": "Patient/demo-002"
+   },
+   "medicationCodeableConcept": {
+    "coding": [
+     {
+      "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+      "code": "745679",
+      "display": "Albuterol 0.09 MG/ACTUAT Inhaler"
+     }
+    ],
+    "text": "Albuterol 0.09 MG/ACTUAT Inhaler"
+   },
+   "authoredOn": "2018-03-01T10:00:00+09:00",
+   "dosageInstruction": [
+    {
+     "text": "2 puffs as needed"
+    }
+   ]
+  }
+ ]
+}
