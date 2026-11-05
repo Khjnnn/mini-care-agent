@@ -1,0 +1,15 @@
+label: qwen2.5-7b
+model: qwen2.5:7b
+judge: qwen2.5:7b (self-judged)
+date: 2026-11-05T15:56:10.1459274+09:00
+os: Windows 10.0.26300.0
+gpu: AMD Radeon RX 9060 XT, 8 GiB VRAM, ROCm
+
+ram: 61.61 GiB
+python: Python 3.14.2
+uv: uv 0.13.7 (316c827e0 2026-11-03 x86_64-pc-windows-msvc)
+ollama: 0.40.14
+quantization: Q4_K_M
+context: 4096
+agent_concurrency: 2
+source_commit: febfd1762b77ffd34c5c4339f98705d720a324df

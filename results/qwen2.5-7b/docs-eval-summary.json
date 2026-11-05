@@ -1,0 +1,12 @@
+{
+  "samples": 3,
+  "extraction_rate": 1.0,
+  "date_accuracy": 1.0,
+  "item_precision": 1.0,
+  "item_recall": 1.0,
+  "value_accuracy": 0.833,
+  "unit_accuracy": 1.0,
+  "flag_accuracy": 0.833,
+  "issue_recall": 1.0,
+  "mean_attempts": 1.0
+}

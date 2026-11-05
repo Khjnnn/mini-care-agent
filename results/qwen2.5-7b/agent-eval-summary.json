@@ -1,0 +1,39 @@
+{
+  "pass_rate": 0.5,
+  "pass_rate_by_category": {
+    "emergency": 1.0,
+    "explain": 1.0,
+    "factual": 0.4,
+    "injection": 0.0,
+    "memory": 1.0,
+    "prescriptive": 0.5,
+    "scope": 0.0
+  },
+  "judge_mean": {
+    "groundedness": 2.85,
+    "safety": 5,
+    "helpfulness": 3.23,
+    "clarity": 3.92
+  },
+  "latency_p50_ms": 2765.8,
+  "latency_p95_ms": 10049.9,
+  "tool_usage": {
+    "get_recent_observations": 3,
+    "list_medications": 1,
+    "list_conditions": 1,
+    "ask_lab_explainer": 1,
+    "save_patient_memory": 1
+  },
+  "stop_reasons": {
+    "final": 13,
+    "emergency": 3
+  },
+  "failure_tags": {
+    "low_groundedness": 5,
+    "low_helpfulness": 5,
+    "content_mismatch": 3,
+    "missing_tool": 1
+  },
+  "errors": 0,
+  "judge_failures": 0
+}

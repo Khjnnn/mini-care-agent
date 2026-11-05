@@ -1,0 +1,60 @@
+{
+  "summary": {
+    "samples": 3,
+    "extraction_rate": 1.0,
+    "date_accuracy": 1.0,
+    "item_precision": 1.0,
+    "item_recall": 1.0,
+    "value_accuracy": 0.833,
+    "unit_accuracy": 1.0,
+    "flag_accuracy": 0.833,
+    "issue_recall": 1.0,
+    "mean_attempts": 1.0
+  },
+  "samples": [
+    {
+      "sample": "01",
+      "extracted": true,
+      "date_correct": true,
+      "precision": 1.0,
+      "recall": 1.0,
+      "value_acc": 1.0,
+      "unit_acc": 1.0,
+      "flag_acc": 1.0,
+      "issue_recall": null,
+      "attempts": 1,
+      "errors": []
+    },
+    {
+      "sample": "02",
+      "extracted": true,
+      "date_correct": true,
+      "precision": 1.0,
+      "recall": 1.0,
+      "value_acc": 1.0,
+      "unit_acc": 1.0,
+      "flag_acc": 1.0,
+      "issue_recall": null,
+      "attempts": 1,
+      "errors": []
+    },
+    {
+      "sample": "03",
+      "extracted": true,
+      "date_correct": true,
+      "precision": 1.0,
+      "recall": 1.0,
+      "value_acc": 0.5,
+      "unit_acc": 1.0,
+      "flag_acc": 0.5,
+      "issue_recall": 1.0,
+      "attempts": 1,
+      "errors": [
+        "718-7: value '3.8'→3.8 != 13.8",
+        "718-7: flag L != N",
+        "18262-6: value '1O5'→None != 105",
+        "18262-6: flag None != N"
+      ]
+    }
+  ]
+}
