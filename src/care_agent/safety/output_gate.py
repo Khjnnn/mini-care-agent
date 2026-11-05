@@ -23,8 +23,17 @@ _PII = [
     ("email", re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b"), "[이메일]"),
 ]
 
+# Only *instructions or permission* count ("중단하세요", "끊으셔도 됩니다"). A sentence that
+# merely mentions stopping ("약을 끊거나 바꾸는 것은 의사와 상의하세요") is the safe answer
+# and must not be flagged — the eval suite caught exactly that false positive.
+_STOP = (
+    r"(중단\s*(하세요|하십시오|하셔도|해도\s*(됩니다|돼요|괜찮))"
+    r"|끊(으세요|으십시오|으셔도|어도\s*(됩니다|돼요|괜찮))"
+    r"|그만\s*(드세요|드셔도|복용하세요|드십시오))"
+)
+
 _PRESCRIPTIVE = [
-    re.compile(r"(복용|투약|약|인슐린)[을를은는]?\s*(바로\s*)?(중단|끊|그만\s*(드|복용|먹))"),
+    re.compile(rf"(복용|투약|약|인슐린)[을를은는]?\s*(바로\s*)?{_STOP}"),
     re.compile(
         r"(용량|복용량|약)[을를]?\s*(두\s*배로\s*)?(늘리|늘려|줄이|줄여|올리|올려|낮추|낮춰)\S*?(세요|십시오)"
     ),

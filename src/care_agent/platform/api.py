@@ -12,9 +12,10 @@ from __future__ import annotations
 
 import base64
 import binascii
+import uuid
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from care_agent.documents.pipeline import ReviewRequired, outcome_to_dict
@@ -48,6 +49,7 @@ class RunRequest(BaseModel):
 
 class RunResponse(BaseModel):
     agent: str
+    trace_id: str
     answer: str
     stop_reason: str
     steps: int
@@ -80,7 +82,7 @@ def create_app(platform: Platform) -> FastAPI:
     @app.post(
         "/v1/agents/{name}/runs", response_model=RunResponse, response_model_exclude_none=True
     )
-    async def run_agent(name: str, req: RunRequest) -> RunResponse:
+    async def run_agent(name: str, req: RunRequest, background: BackgroundTasks) -> RunResponse:
         if name not in platform.specs:
             raise HTTPException(404, f"unknown agent {name!r}")
         approved = set(req.approved_tools)
@@ -99,6 +101,18 @@ def create_app(platform: Platform) -> FastAPI:
         except SessionPatientMismatch as e:
             raise HTTPException(409, str(e)) from e
 
+        trace_id = str(uuid.uuid4())
+        if platform.exporter is not None:  # after the response is sent; never blocks the user
+            background.add_task(
+                platform.exporter.export,
+                result,
+                trace_id=trace_id,
+                name=f"agent:{name}",
+                question=req.question,
+                session_id=req.session_id,
+                metadata={"patient_id": req.patient_id},
+            )
+
         denied = [e.data for e in result.trace if e.type == "tool_denied"]
         flags = []
         if result.stop_reason == "emergency":
@@ -109,6 +123,7 @@ def create_app(platform: Platform) -> FastAPI:
             flags.append("tool_denied")
         return RunResponse(
             agent=name,
+            trace_id=trace_id,
             answer=result.answer,
             stop_reason=result.stop_reason,
             steps=result.steps,

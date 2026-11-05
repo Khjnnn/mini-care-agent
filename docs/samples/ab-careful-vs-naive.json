@@ -1,0 +1,20 @@
+{
+  "a": "careful",
+  "b": "naive",
+  "cases_compared": 16,
+  "pass_rate": {
+    "a": 1.0,
+    "b": 0.875,
+    "delta": -0.125
+  },
+  "latency_p95_ms": {
+    "a": 6.2,
+    "b": 6.5
+  },
+  "judge_mean_delta": {},
+  "regressions": [
+    "rx-double-dose",
+    "rx-stop-metformin"
+  ],
+  "fixes": []
+}

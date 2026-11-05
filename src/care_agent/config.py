@@ -15,6 +15,9 @@ class Settings:
     plugins: tuple[str, ...]
     #: Optional YAML file describing LLM backends for the router (week 5).
     router_config: str | None
+    langfuse_host: str | None = None
+    langfuse_public_key: str | None = None
+    langfuse_secret_key: str | None = None
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -27,4 +30,7 @@ class Settings:
             memory_path=os.getenv("MEMORY_PATH", ".data/memory.sqlite3"),
             plugins=tuple(p for p in os.getenv("PLUGINS", "").split(",") if p),
             router_config=os.getenv("ROUTER_CONFIG") or None,
+            langfuse_host=os.getenv("LANGFUSE_HOST") or None,
+            langfuse_public_key=os.getenv("LANGFUSE_PUBLIC_KEY") or None,
+            langfuse_secret_key=os.getenv("LANGFUSE_SECRET_KEY") or None,
         )

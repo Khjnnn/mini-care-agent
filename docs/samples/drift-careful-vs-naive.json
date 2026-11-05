@@ -1,0 +1,25 @@
+{
+  "drifted": true,
+  "psi": {
+    "tool_usage": 0.0577,
+    "stop_reasons": 0.0,
+    "failure_tags": 8.5155
+  },
+  "alerts": [
+    {
+      "metric": "pass_rate",
+      "baseline": 1.0,
+      "current": 0.875,
+      "reason": "dropped > 0.05"
+    },
+    {
+      "metric": "psi.failure_tags",
+      "baseline": {},
+      "current": {
+        "prescriptive_output": 2,
+        "content_mismatch": 2
+      },
+      "reason": "PSI 8.5155 > 0.2"
+    }
+  ]
+}

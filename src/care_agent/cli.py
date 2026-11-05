@@ -23,8 +23,16 @@ from care_agent.llm.openai_compat import OpenAICompatLLM
 from care_agent.memory.store import MemoryStore
 from care_agent.platform.core import Platform
 
+LLM_CHOICES = ["endpoint", "heuristic-careful", "heuristic-naive"]
 
-def build_llm(settings: Settings) -> LLM:
+
+def build_llm(settings: Settings, choice: str = "endpoint") -> LLM:
+    """``endpoint`` = LLM_BASE_URL (or the router if ROUTER_CONFIG is set);
+    ``heuristic-*`` = keyword-rule stand-in for offline demos (see llm/heuristic.py)."""
+    if choice.startswith("heuristic-"):
+        from care_agent.llm.heuristic import HeuristicLLM
+
+        return HeuristicLLM(choice.removeprefix("heuristic-"))  # type: ignore[arg-type]
     if settings.router_config:
         from care_agent.serving.router import RoutingLLM
 
@@ -33,21 +41,31 @@ def build_llm(settings: Settings) -> LLM:
 
 
 def build_platform(
-    settings: Settings, *, offline: bool, memory_path: str | None = None
+    settings: Settings,
+    *,
+    offline: bool,
+    memory_path: str | None = None,
+    llm: str = "endpoint",
 ) -> Platform:
     fhir = FHIRClient(settings.fhir_base_url, transport=InMemoryFHIR() if offline else None)
     path = memory_path or settings.memory_path
     if path != ":memory:":
         Path(path).parent.mkdir(parents=True, exist_ok=True)
     platform = Platform(
-        build_llm(settings), fhir, memory=MemoryStore(path), plugins=settings.plugins
+        build_llm(settings, llm), fhir, memory=MemoryStore(path), plugins=settings.plugins
     )
     platform.load_agents(settings.agents_dir)
+    if settings.langfuse_host and settings.langfuse_public_key and settings.langfuse_secret_key:
+        from care_agent.observability.langfuse import LangfuseExporter
+
+        platform.exporter = LangfuseExporter(
+            settings.langfuse_host, settings.langfuse_public_key, settings.langfuse_secret_key
+        )
     return platform
 
 
 async def _ask(args: argparse.Namespace) -> int:
-    platform = build_platform(Settings.from_env(), offline=args.offline)
+    platform = build_platform(Settings.from_env(), offline=args.offline, llm=args.llm)
     try:
         result = await platform.agent(args.agent).run(
             args.question, patient_id=args.patient, session_id=args.session
@@ -88,9 +106,81 @@ def _serve(args: argparse.Namespace) -> int:
 
     from care_agent.platform.api import create_app
 
-    app = create_app(build_platform(Settings.from_env(), offline=args.offline))
+    app = create_app(build_platform(Settings.from_env(), offline=args.offline, llm=args.llm))
     uvicorn.run(app, host=args.host, port=args.port)
     return 0
+
+
+def _eval(args: argparse.Namespace) -> int:
+    from care_agent.evals.analysis import markdown_report
+    from care_agent.evals.compare import compare_runs, detect_drift
+    from care_agent.evals.runner import RunFile
+
+    if args.eval_cmd == "run":
+        run = asyncio.run(_eval_run(args))
+        run.save(args.out)
+        print(json.dumps(run.meta["summary"], ensure_ascii=False, indent=2))
+        if args.report:
+            Path(args.report).write_text(markdown_report(run), "utf-8")
+        return 0
+    if args.eval_cmd == "report":
+        text = markdown_report(RunFile.load(args.run))
+        if args.out:
+            Path(args.out).write_text(text, "utf-8")
+        print(text)
+        return 0
+    if args.eval_cmd == "compare":
+        result = compare_runs(RunFile.load(args.a), RunFile.load(args.b))
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+    drift = detect_drift(
+        RunFile.load(args.baseline),
+        RunFile.load(args.current),
+        max_latency_increase=args.max_latency_increase,
+    )
+    print(
+        json.dumps(
+            {
+                "drifted": drift.drifted,
+                "psi": drift.psi,
+                "alerts": [a.__dict__ for a in drift.alerts],
+            },
+            ensure_ascii=False,
+            indent=2,
+            default=str,
+        )
+    )
+    return 1 if drift.drifted else 0  # non-zero exit so CI / cron can alert
+
+
+async def _eval_run(args: argparse.Namespace):  # -> RunFile
+    from care_agent.evals.cases import load_cases
+    from care_agent.evals.judge import LLMJudge
+    from care_agent.evals.runner import EvalRunner
+
+    settings = Settings.from_env()
+    platform = build_platform(settings, offline=args.offline, memory_path=":memory:", llm=args.llm)
+    judge = LLMJudge(build_llm(settings, args.judge)) if args.judge else None
+    on_result = None
+    if platform.exporter is not None:
+        exporter = platform.exporter
+
+        async def on_result(case, result):  # noqa: ANN001, ANN202
+            await exporter.export(
+                result,
+                name=f"eval:{case.id}",
+                question=case.question,
+                tags=["eval", args.label, case.category],
+            )
+
+    runner = EvalRunner(
+        lambda _case: platform.agent(args.agent),
+        judge=judge,
+        concurrency=args.concurrency,
+        on_result=on_result,
+    )
+    cases = await asyncio.to_thread(load_cases, args.dataset)
+    return await runner.run(cases, label=args.label, meta={"agent": args.agent, "llm": args.llm})
 
 
 _IMAGE_MIME = {
@@ -142,6 +232,35 @@ def main(argv: list[str] | None = None) -> int:
     ask.add_argument("--session", help="session id for multi-turn memory")
     ask.add_argument("--offline", action="store_true", help="use bundled synthetic records")
     ask.add_argument("--trace", action="store_true", help="print trace events to stderr")
+    ask.add_argument("--llm", choices=LLM_CHOICES, default="endpoint")
+
+    ev_parser = sub.add_parser("eval", help="agent evaluation: run, report, compare, drift")
+    ev_sub = ev_parser.add_subparsers(dest="eval_cmd", required=True)
+    run = ev_sub.add_parser("run", help="run the eval suite")
+    run.add_argument("--dataset", default="datasets/agent_eval/cases.yaml")
+    run.add_argument("--agent", default="care_chat")
+    run.add_argument("--llm", choices=LLM_CHOICES, default="endpoint")
+    run.add_argument("--judge", choices=LLM_CHOICES, help="enable LLM-as-a-Judge with this LLM")
+    run.add_argument("--concurrency", type=int, default=4)
+    run.add_argument("--offline", action="store_true")
+    run.add_argument("--label", default="run")
+    run.add_argument("--out", default="runs/latest.json")
+    run.add_argument("--report", help="also write a markdown report here")
+    rep = ev_sub.add_parser("report", help="markdown report with failure analysis")
+    rep.add_argument("run")
+    rep.add_argument("--out")
+    cmp_ = ev_sub.add_parser("compare", help="A/B compare two run files")
+    cmp_.add_argument("a")
+    cmp_.add_argument("b")
+    dr = ev_sub.add_parser("drift", help="drift check; exit 1 when drifted")
+    dr.add_argument("baseline")
+    dr.add_argument("current")
+    dr.add_argument(
+        "--max-latency-increase",
+        type=float,
+        default=0.3,
+        help="relative p95 increase that alerts (use a large value on shared CI runners)",
+    )
 
     tools = sub.add_parser("tools", help="list registered tools")
     tools.add_argument("--schema", action="store_true")
@@ -152,6 +271,7 @@ def main(argv: list[str] | None = None) -> int:
     serve.add_argument("--offline", action="store_true")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8100)
+    serve.add_argument("--llm", choices=LLM_CHOICES, default="endpoint")
 
     args = parser.parse_args(argv)
     handlers = {
@@ -160,6 +280,7 @@ def main(argv: list[str] | None = None) -> int:
         "agents": _agents,
         "serve": _serve,
         "docs": _docs,
+        "eval": _eval,
     }
     return handlers[args.cmd](args)
 

@@ -82,6 +82,8 @@ class Platform:
         for module in plugins:
             self.load_plugin(module)
         self.specs: dict[str, AgentSpec] = {}
+        #: Optional trace exporter (``observability.langfuse.LangfuseExporter``).
+        self.exporter: Any = None
 
     # -- registration ----------------------------------------------------------------
     def load_plugin(self, module: str) -> None:

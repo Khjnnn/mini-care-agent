@@ -17,3 +17,22 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pytest -q
+
+  agent-eval:
+    # Regression gate: run the agent suite offline (heuristic stand-in LLM, in-memory FHIR)
+    # and fail if quality drifts from the committed baseline. With a real endpoint, point
+    # --llm at it and keep the same drift step.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - run: uv run care-agent eval run --offline --llm heuristic-careful --label ci --out runs/ci.json --report runs/ci.md
+      - run: uv run care-agent eval drift evals/baselines/heuristic-careful.json runs/ci.json --max-latency-increase 100
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-report
+          path: runs/

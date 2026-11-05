@@ -17,15 +17,15 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
-import re
 import shutil
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import Protocol
 
 from pydantic import ValidationError
 
 from care_agent.documents.schema import ExtractedLabReport
 from care_agent.llm.base import LLM, Message
+from care_agent.llm.jsonout import parse_json_object
 
 SYSTEM = """\
 당신은 한국어 건강검진·혈액검사 결과지를 그대로 옮겨 적는 전사(transcription) 도구입니다.
@@ -127,7 +127,7 @@ class LabReportExtractor:
             resp = await self.llm.complete(messages, [])
             raw = resp.content or ""
             try:
-                report = ExtractedLabReport.model_validate(_parse_json(raw))
+                report = ExtractedLabReport.model_validate(parse_json_object(raw))
             except (ValueError, ValidationError) as e:
                 error = _describe(e)
                 result.attempts.append(Attempt(raw, error))
@@ -144,17 +144,6 @@ class LabReportExtractor:
             result.report = report
             return result
         return result
-
-
-def _parse_json(raw: str) -> Any:
-    text = raw.strip()
-    fenced = re.search(r"```(?:json)?\s*(.*?)```", text, re.S)
-    if fenced:
-        text = fenced.group(1).strip()
-    start, end = text.find("{"), text.rfind("}")
-    if start == -1 or end == -1:
-        raise ValueError("no JSON object found in model output")
-    return json.loads(text[start : end + 1])
 
 
 def _describe(e: Exception) -> str:
