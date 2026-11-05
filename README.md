@@ -18,7 +18,7 @@
 | **평가·관측** | 회귀 스위트, LLM-as-a-Judge(루브릭·pairwise), 대량 실행 큐, 실패 분류, A/B 비교, drift(PSI), Langfuse, CI 품질 게이트 | `evals/` `observability/` |
 | **서빙·라우팅** | PHI 기반 라우터(온프렘 ↔ GCP ↔ public), 서킷 브레이커, OpenAI 호환 게이트웨이, TTFT/ITL 벤치마크, vLLM·GKE 배포 설정 | `serving/` `deploy/` `docs/serving.md` |
 
-테스트 114개는 모두 Docker, GPU, API 키 없이 돌아갑니다(`InMemoryFHIR`, `ScriptedLLM`, `HeuristicLLM`).
+테스트 116개는 모두 Docker, GPU, API 키 없이 돌아갑니다(`InMemoryFHIR`, `ScriptedLLM`, `HeuristicLLM`).
 
 ## 아키텍처
 
@@ -82,6 +82,8 @@ uv run care-agent ask --offline --llm heuristic-careful --patient demo-001 "최�
 uv run care-agent eval run --offline --llm heuristic-naive --label naive --out runs/naive.json --report runs/naive.md
 ```
 
+**실제 모델로 전체 평가** — 에이전트 평가와 Judge, 검사결과지 추출, 벤치마크를 한 번에: [docs/run-on-your-pc.md](docs/run-on-your-pc.md)
+
 **실제 LLM 사용** (vLLM, Ollama, OpenAI 등 OpenAI 호환 엔드포인트)
 
 ```bash
@@ -141,7 +143,7 @@ CI는 `agent-eval` job에서 같은 스위트를 실행하고, 커밋된 baselin
 - [x] **3주차 문서 구조화**: VLM 또는 OCR+LLM 추출, 자가 수정, 정규화(LOINC·단위·판정), 사람 검토 후 FHIR 트랜잭션 저장, 필드 단위 평가
 - [x] **4주차 평가·관측**: Langfuse, LLM-as-a-Judge, 대량 실행 큐, 실패 분류, A/B 비교, drift, CI 품질 게이트
 - [x] **5~6주차 서빙·라우팅**: PHI 기반 라우터, 서킷 브레이커, 게이트웨이와 메트릭, 벤치마크 도구, vLLM·GKE 배포, 모델 도입 의사결정 프레임(`docs/serving.md`)
-- [ ] GPU 실측 벤치마크와 실제 모델(Qwen 7B/72B) 평가 결과 채우기
+- [ ] 실제 모델 평가 결과 채우기 — 로컬 PC에서 `scripts/run_real_eval.sh` 한 번으로 실행 ([가이드](docs/run-on-your-pc.md))
 - [ ] 음식 사진 vision + 임베딩 검색, 게이트웨이 스트리밍 지원
 
 ## 한계 (솔직하게)

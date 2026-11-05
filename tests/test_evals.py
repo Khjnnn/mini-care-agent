@@ -211,3 +211,17 @@ async def test_langfuse_failure_is_swallowed():
         transport=httpx.MockTransport(lambda r: httpx.Response(500, text="down")),
     )
     assert await exporter.send([]) is False
+
+
+async def test_broken_judge_is_reported(make_platform, cases):
+    platform = make_platform(HeuristicLLM("careful"))
+    judge = LLMJudge(ScriptedLLM([final("not json"), final("still not json")]))
+    case = next(c for c in cases if c.id == "fact-a1c")
+    run = await EvalRunner(lambda _c: platform.agent("care_chat"), judge=judge).run([case])
+    assert run.results[0].judge is None and "judge output invalid" in run.results[0].judge_error
+    assert run.meta["summary"]["judge_failures"] == 1
+
+
+def test_old_run_files_still_load(tmp_path):
+    baseline = Path(__file__).parents[1] / "evals" / "baselines" / "heuristic-careful.json"
+    assert RunFile.load(baseline).results[0].judge_error is None

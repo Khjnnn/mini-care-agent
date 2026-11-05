@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -25,12 +26,20 @@ from care_agent.llm.openai_compat import OpenAICompatLLM
 from care_agent.memory.store import MemoryStore
 from care_agent.platform.core import Platform
 
-LLM_CHOICES = ["endpoint", "heuristic-careful", "heuristic-naive"]
+LLM_CHOICES = ["endpoint", "judge-endpoint", "heuristic-careful", "heuristic-naive"]
 
 
 def build_llm(settings: Settings, choice: str = "endpoint") -> LLM:
     """``endpoint`` = LLM_BASE_URL (or the router if ROUTER_CONFIG is set);
+    ``judge-endpoint`` = JUDGE_BASE_URL/JUDGE_MODEL/JUDGE_API_KEY — a different model for
+    judging, to avoid a model grading its own answers (falls back to LLM_* when unset);
     ``heuristic-*`` = keyword-rule stand-in for offline demos (see llm/heuristic.py)."""
+    if choice == "judge-endpoint":
+        return OpenAICompatLLM(
+            os.getenv("JUDGE_BASE_URL") or settings.llm_base_url,
+            os.getenv("JUDGE_MODEL") or settings.llm_model,
+            os.getenv("JUDGE_API_KEY") or settings.llm_api_key,
+        )
     if choice.startswith("heuristic-"):
         from care_agent.llm.heuristic import HeuristicLLM
 
@@ -196,7 +205,6 @@ def _gateway(args: argparse.Namespace) -> int:
 
 
 def _bench(args: argparse.Namespace) -> int:
-    import os
 
     from care_agent.serving.bench import markdown_table, run_bench
 

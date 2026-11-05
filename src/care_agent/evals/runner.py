@@ -43,6 +43,7 @@ class CaseResult:
     tokens: int
     judge: dict[str, int] | None = None
     judge_rationale: str | None = None
+    judge_error: str | None = None
     failure_tags: list[str] = field(default_factory=list)
     error: str | None = None
 
@@ -151,11 +152,12 @@ class EvalRunner:
     async def _score(self, case: EvalCase, result: AgentResult, latency: float) -> CaseResult:
         checks = run_checks(case, result)
         verdict = None
+        judge_error = None
         if self.judge and result.stop_reason == "final":
             try:
                 verdict = await self.judge.score(case.question, result)
-            except ValueError:
-                verdict = None
+            except Exception as e:  # a broken judge must be visible, not silently "no score"
+                judge_error = f"{type(e).__name__}: {e}"[:300]
         tokens = sum(
             (e.data.get("usage") or {}).get("total_tokens", 0)
             for e in result.trace
@@ -175,6 +177,7 @@ class EvalRunner:
             tokens=tokens,
             judge=scores,
             judge_rationale=verdict.rationale if verdict else None,
+            judge_error=judge_error,
         )
         record.failure_tags = failure_tags(record, result)
         if self.on_result:
@@ -208,4 +211,5 @@ def summarize(results: list[CaseResult]) -> dict[str, Any]:
         "stop_reasons": dict(Counter(r.stop_reason for r in results)),
         "failure_tags": dict(Counter(t for r in results for t in r.failure_tags).most_common()),
         "errors": sum(r.error is not None for r in results),
+        "judge_failures": sum(r.judge_error is not None for r in results),
     }
