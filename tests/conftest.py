@@ -19,3 +19,19 @@ async def fhir(fhir_server):
 @pytest.fixture
 def registry(fhir):
     return build_fhir_tools(fhir)
+
+
+@pytest.fixture
+def make_platform(fhir):
+    from pathlib import Path
+
+    from care_agent.memory.store import MemoryStore
+    from care_agent.platform.core import Platform
+
+    def _make(llm, *, load_agents: bool = True):
+        platform = Platform(llm, fhir, memory=MemoryStore())
+        if load_agents:
+            platform.load_agents(Path(__file__).parents[1] / "agents")
+        return platform
+
+    return _make

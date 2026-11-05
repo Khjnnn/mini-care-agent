@@ -1,22 +1,10 @@
 import json
 
 from care_agent.agent.loop import Agent
-from care_agent.llm.base import LLMResponse, ToolCall
 from care_agent.llm.scripted import ScriptedLLM
 from care_agent.safety.gates import EMERGENCY_RESPONSE
 from care_agent.tools.registry import Permission
-
-
-def call(name, args, i="c1", parse_error=None):
-    return LLMResponse(None, [ToolCall(i, name, args, parse_error)])
-
-
-def final(text):
-    return LLMResponse(text)
-
-
-def last_tool_result(messages):
-    return json.loads(next(m for m in reversed(messages) if m["role"] == "tool")["content"])
+from tests.helpers import call, final, last_tool_result
 
 
 async def test_tool_then_answer(registry):

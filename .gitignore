@@ -9,3 +9,4 @@ dist/
 # Synthea output & jar (generated, large)
 .synthea/
 output/
+.data/

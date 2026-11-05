@@ -27,6 +27,10 @@ class Permission(StrEnum):
     """How much a tool can change the world. Used by the safety gate."""
 
     READ = "read"
+    #: Agent-internal state (e.g. memory notes). Auto-allowed but audited in the trace,
+    #: never exported over MCP, never touches the EHR.
+    MEMORY = "memory"
+    #: Changes the EHR or the outside world. Requires explicit human approval.
     WRITE = "write"
 
 
@@ -103,16 +107,35 @@ class ToolRegistry:
             desc = description or inspect.getdoc(f)
             if not desc:
                 raise ValueError(f"tool {tool_name!r} needs a description or docstring")
-            self._tools[tool_name] = Tool(
-                name=tool_name,
-                description=desc,
-                permission=permission,
-                fn=f,
-                input_model=_input_model(f, tool_name),
+            self.add(
+                Tool(
+                    name=tool_name,
+                    description=desc,
+                    permission=permission,
+                    fn=f,
+                    input_model=_input_model(f, tool_name),
+                )
             )
             return f
 
         return decorator(fn) if fn is not None else decorator
+
+    def add(self, tool: Tool) -> None:
+        if tool.name in self._tools:
+            raise ValueError(f"tool {tool.name!r} is already registered")
+        self._tools[tool.name] = tool
+
+    def subset(self, names: list[str] | None) -> ToolRegistry:
+        """A new registry with only ``names`` (``None`` or ``["*"]`` = all tools)."""
+        out = ToolRegistry()
+        if names is None or names == ["*"]:
+            names = self.names()
+        missing = [n for n in names if n not in self._tools]
+        if missing:
+            raise KeyError(f"unknown tools: {missing}")
+        for n in names:
+            out.add(self._tools[n])
+        return out
 
     def get(self, name: str) -> Tool | None:
         return self._tools.get(name)

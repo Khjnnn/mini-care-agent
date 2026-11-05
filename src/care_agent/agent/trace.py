@@ -10,7 +10,16 @@ import time
 from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 
-EventType = Literal["input_gate", "llm", "tool_call", "tool_denied", "tool_error", "final"]
+EventType = Literal[
+    "input_gate",
+    "llm",
+    "tool_call",
+    "tool_denied",
+    "tool_error",
+    "subagent",
+    "output_gate",
+    "final",
+]
 
 
 @dataclass
